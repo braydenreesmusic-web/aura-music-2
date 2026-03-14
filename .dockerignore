@@ -1,0 +1,9 @@
+node_modules
+dist
+downloads
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+.git
+.vscode
+*.code-workspace

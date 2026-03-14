@@ -16,8 +16,12 @@ const CHILD_ENV: NodeJS.ProcessEnv = {
     '/usr/local/bin',
     '/usr/bin',
     '/bin',
+    // Python pip --break-system-packages may install here
+    '/root/.local/bin',
     process.env.PATH ?? '',
   ].join(':'),
+  // Suppress ytdl-core update-check 403 noise
+  YTDL_NO_UPDATE: '1',
 };
 
 function canExecute(command: string, args: string[]): boolean {
@@ -45,6 +49,7 @@ function resolveYtDlpCommand(): YtDlpCommand {
     '/usr/local/bin/yt-dlp',
     '/usr/bin/yt-dlp',
     '/bin/yt-dlp',
+    '/root/.local/bin/yt-dlp',
   ];
 
   for (const c of candidates) {
@@ -71,6 +76,12 @@ function resolveYtDlpCommand(): YtDlpCommand {
 
 const YT_DLP = resolveYtDlpCommand();
 const HAS_YT_DLP = canExecute(YT_DLP.command, [...YT_DLP.prefixArgs, '--version']);
+
+if (HAS_YT_DLP) {
+  console.log(`[downloader] yt-dlp found: ${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')}`.trim());
+} else {
+  console.warn('[downloader] yt-dlp NOT available — falling back to ytdl-core (may be blocked by YouTube)');
+}
 
 function spawnYtDlp(args: string[], options?: SpawnOptionsWithoutStdio) {
   return spawn(YT_DLP.command, [...YT_DLP.prefixArgs, ...args], {

@@ -10,29 +10,69 @@ import { matchMetadata } from './metadataMatch';
 
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
-const DOWNLOAD_DIR = path.join(process.cwd(), 'downloads');
 
-function resolveDatabasePath() {
-  const configured = process.env.DB_PATH
-    ? path.resolve(process.env.DB_PATH)
-    : path.join(process.cwd(), 'server-data.sqlite');
-
-  const configuredDir = path.dirname(configured);
+/** Safely create a directory, returning true on success. */
+function ensureDir(dir: string): boolean {
   try {
-    fs.mkdirSync(configuredDir, { recursive: true });
-    return configured;
-  } catch (err: any) {
-    if (process.env.DB_PATH) {
-      console.warn(`[db] DB_PATH not writable (${configuredDir}): ${err?.code || err?.message}. Falling back to /tmp.`);
-      const fallback = '/tmp/aura-server-data.sqlite';
-      fs.mkdirSync(path.dirname(fallback), { recursive: true });
-      return fallback;
-    }
-    throw err;
+    fs.mkdirSync(dir, { recursive: true });
+    // Verify writable by touching a tmp file
+    const probe = path.join(dir, '.write-test');
+    fs.writeFileSync(probe, '');
+    fs.unlinkSync(probe);
+    return true;
+  } catch {
+    return false;
   }
 }
 
+function resolveDatabasePath(): string {
+  const candidates: string[] = [];
+
+  if (process.env.DB_PATH) {
+    candidates.push(path.resolve(process.env.DB_PATH));
+  }
+  candidates.push(path.join(process.cwd(), 'server-data.sqlite'));
+  candidates.push('/tmp/aura-server-data.sqlite');
+
+  for (const candidate of candidates) {
+    const dir = path.dirname(candidate);
+    if (ensureDir(dir)) {
+      console.log(`[db] Using database at ${candidate}`);
+      return candidate;
+    }
+    console.warn(`[db] Cannot write to ${dir}, trying next fallback…`);
+  }
+
+  // Last resort — should always succeed
+  const lastResort = '/tmp/aura-server-data.sqlite';
+  console.warn(`[db] All paths failed, using ${lastResort}`);
+  return lastResort;
+}
+
+function resolveDownloadDir(): string {
+  const candidates: string[] = [];
+
+  if (process.env.DOWNLOAD_DIR) {
+    candidates.push(path.resolve(process.env.DOWNLOAD_DIR));
+  }
+  candidates.push(path.join(process.cwd(), 'downloads'));
+  candidates.push('/tmp/aura-downloads');
+
+  for (const dir of candidates) {
+    if (ensureDir(dir)) {
+      console.log(`[downloads] Using ${dir}`);
+      return dir;
+    }
+    console.warn(`[downloads] Cannot write to ${dir}, trying next…`);
+  }
+
+  const lastResort = '/tmp/aura-downloads';
+  console.warn(`[downloads] All paths failed, using ${lastResort}`);
+  return lastResort;
+}
+
 const DB_PATH = resolveDatabasePath();
+const DOWNLOAD_DIR = resolveDownloadDir();
 const db = new Database(DB_PATH);
 
 db.pragma('journal_mode = WAL');
