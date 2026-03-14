@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_22", "yt-dlp", "ffmpeg"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run lint"]
+
+[start]
+cmd = "npm run start:server"

@@ -121,9 +121,21 @@ git push
 2. Service root: repository root.
 3. Railway auto-detects `railway.toml` and runs:
    - `startCommand = npm run start:server`
-4. Add persistent volume mounted to project directory so SQLite + downloads persist.
-5. Confirm health endpoint:
+4. Keep `nixpacks.toml` in repo root so Railway installs required binaries:
+   - `yt-dlp`
+   - `ffmpeg`
+5. Add persistent volume mounted to service root so SQLite + `downloads/` persist.
+6. Confirm health endpoint:
    - `/api/health`
+
+Recommended Railway env vars:
+- `NODE_ENV=production`
+- `PORT` (optional; Railway usually injects this)
+
+If downloads/search fail on backend:
+- Open Railway logs and check for `yt-dlp not found` or `ffmpeg` errors.
+- Verify `nixpacks.toml` is detected in build logs.
+- Redeploy after adding/updating `nixpacks.toml`.
 
 ### 4) Point your domain
 
