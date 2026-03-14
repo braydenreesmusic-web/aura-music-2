@@ -164,6 +164,13 @@ if (HAS_YT_DLP) {
   console.warn('[downloader] yt-dlp NOT available — falling back to ytdl-core (may be blocked by YouTube)');
 }
 
+// Check ffmpeg availability once at startup
+const HAS_FFMPEG = (() => {
+  try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore', env: CHILD_ENV }); return true; }
+  catch { return false; }
+})();
+console.log(`[downloader] ffmpeg: ${HAS_FFMPEG ? 'available' : 'NOT available (no format conversion)'}`);
+
 function spawnYtDlp(args: string[], options?: SpawnOptionsWithoutStdio) {
   return spawn(YT_DLP.command, [...YT_DLP.prefixArgs, ...cookieArgs(), ...args], {
     ...options,
@@ -216,25 +223,32 @@ export async function downloadMedia(
   // First get video metadata via yt-dlp --dump-json
   const meta = await getMetadata(url);
   const safeTitle = meta.title.replace(/[<>:"/\\|?*]/g, '_').slice(0, 200);
-  const ext = format === 'video' ? 'mp4' : 'mp3';
-  const filename = `${safeTitle}.${ext}`;
-  const filePath = path.join(downloadDir, filename);
-
   // Build yt-dlp args
   const args: string[] = [];
+  let ext: string;
 
   if (format === 'audio') {
-    args.push(
-      '-x',                          // extract audio
-      '--audio-format', 'mp3',       // convert to mp3
-      '--audio-quality', '0',        // best quality
-    );
+    if (HAS_FFMPEG) {
+      args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
+      ext = 'mp3';
+    } else {
+      // No ffmpeg — download best audio in native format (m4a/webm/opus)
+      args.push('-f', 'bestaudio[ext=m4a]/bestaudio/best');
+      ext = 'm4a';
+    }
   } else {
-    args.push(
-      '-f', 'b',                     // best single format (pre-merged, most compatible)
-      '--merge-output-format', 'mp4',
-    );
+    if (HAS_FFMPEG) {
+      args.push('-f', 'bestvideo+bestaudio/best', '--merge-output-format', 'mp4');
+      ext = 'mp4';
+    } else {
+      // No ffmpeg — download best pre-muxed format
+      args.push('-f', 'best[ext=mp4]/best');
+      ext = 'mp4';
+    }
   }
+
+  const filename = `${safeTitle}.${ext}`;
+  const filePath = path.join(downloadDir, filename);
 
   args.push(
     '--no-playlist',
