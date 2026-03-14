@@ -4,6 +4,22 @@ import { apiUrl } from '../utils/api';
 const TOKEN_KEY = 'aura-auth-token';
 const AUTH_EVENT = 'aura-auth-changed';
 
+export class AccountSyncError extends Error {
+  status?: number;
+  code?: 'NETWORK' | 'HTTP';
+
+  constructor(message: string, options?: { status?: number; code?: 'NETWORK' | 'HTTP' }) {
+    super(message);
+    this.name = 'AccountSyncError';
+    this.status = options?.status;
+    this.code = options?.code;
+  }
+}
+
+export function isUnauthorizedError(error: unknown): boolean {
+  return error instanceof AccountSyncError && (error.status === 401 || error.status === 403);
+}
+
 export interface AccountUser {
   id: string;
   email: string;
@@ -46,12 +62,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       },
     });
   } catch {
-    throw new Error('Cannot reach account server. Start it with: npm run server');
+    throw new AccountSyncError('Cannot reach account server. Start it with: npm run server', { code: 'NETWORK' });
   }
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data?.error || `Request failed (${res.status})`);
+    throw new AccountSyncError(data?.error || `Request failed (${res.status})`, {
+      code: 'HTTP',
+      status: res.status,
+    });
   }
   return data as T;
 }

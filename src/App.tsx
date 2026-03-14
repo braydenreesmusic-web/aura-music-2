@@ -12,7 +12,7 @@ import { Equalizer } from './components/Equalizer';
 import { VideoPlayer } from './components/VideoPlayer';
 import { ToastContainer } from './components/ToastContainer';
 import { AuthModal } from './components/AuthModal';
-import { accountSync, type AccountUser } from './services/accountSync';
+import { accountSync, isUnauthorizedError, type AccountUser } from './services/accountSync';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { Upload, UserRound, Sparkles, Moon, Sun, Palette, CloudUpload, CloudDownload, LogOut, BarChart3 } from 'lucide-react';
 import { audioPlayer } from './services/AudioPlayer';
@@ -113,7 +113,12 @@ function AppInner() {
 
   React.useEffect(() => {
     if (!accountSync.getToken()) return;
-    accountSync.me().then(setUser).catch(() => accountSync.clearToken());
+    accountSync.me().then(setUser).catch((err) => {
+      if (isUnauthorizedError(err)) {
+        accountSync.clearToken();
+        setUser(null);
+      }
+    });
   }, []);
 
   React.useEffect(() => {
