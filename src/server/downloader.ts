@@ -1,6 +1,38 @@
-import { spawn } from 'child_process';
+import { spawn, execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+
+// Resolve the absolute path to yt-dlp at startup so the server works even when
+// launched without /opt/homebrew/bin in PATH (e.g. via npm scripts, VS Code tasks).
+function resolveytDlp(): string {
+  const candidates = [
+    '/opt/homebrew/bin/yt-dlp',
+    '/usr/local/bin/yt-dlp',
+    '/usr/bin/yt-dlp',
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  try {
+    return execFileSync('which', ['yt-dlp'], { encoding: 'utf8' }).trim();
+  } catch {
+    return 'yt-dlp'; // fall back and let the OS search PATH
+  }
+}
+
+const YT_DLP = resolveytDlp();
+
+// Ensure Homebrew & common binary dirs are on PATH for child processes (ffmpeg, etc.).
+const CHILD_ENV: NodeJS.ProcessEnv = {
+  ...process.env,
+  PATH: [
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+    process.env.PATH ?? '',
+  ].join(':'),
+};
 
 export interface DownloadResult {
   filename: string;
@@ -57,7 +89,7 @@ export async function downloadMedia(
   );
 
   return new Promise((resolve, reject) => {
-    const proc = spawn('yt-dlp', args, { cwd: downloadDir });
+    const proc = spawn(YT_DLP, args, { cwd: downloadDir, env: CHILD_ENV });
     let lastProgress = 0;
     let stderr = '';
 
@@ -144,7 +176,7 @@ interface VideoMeta {
 
 function getMetadata(url: string): Promise<VideoMeta> {
   return new Promise((resolve, reject) => {
-    const proc = spawn('yt-dlp', ['--dump-json', '--no-playlist', '--no-warnings', url]);
+    const proc = spawn(YT_DLP, ['--dump-json', '--no-playlist', '--no-warnings', url], { env: CHILD_ENV });
     let stdout = '';
     let stderr = '';
 
