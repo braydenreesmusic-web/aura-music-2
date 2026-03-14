@@ -138,13 +138,14 @@ Recommended Railway env vars:
 
 1. Create a new Web Service from the GitHub repo.
 2. **Runtime**: `Node`
-3. **Build Command**: `bash render-build.sh`
-4. **Start Command**: `export PATH=$HOME/.local/bin:/usr/local/bin:$PATH && npx tsx src/server/index.ts`
+3. **Build Command**: `npm run render:build`
+4. **Start Command**: `npm run render:start`
 5. Add env vars:
    - `NODE_ENV=production`
    - `YTDL_NO_UPDATE=1`
 6. Do **NOT** set `DB_PATH` unless you attach a persistent disk (free tier has no persistent disk — the server auto-falls-back to a writable path).
-7. Deploy. Check logs for:
+7. In Render dashboard fields, enter commands as plain text (no surrounding backticks/quotes).
+8. Deploy. Check logs for:
    ```
    [downloader] yt-dlp found: /home/user/.local/bin/yt-dlp
    🎵 reesr server running on port 10000
