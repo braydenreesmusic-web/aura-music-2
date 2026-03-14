@@ -10,10 +10,12 @@ type YtDlpCommand = {
 
 // Ensure Homebrew & common binary dirs are on PATH for child processes (ffmpeg, etc.).
 const HOME = process.env.HOME || '/root';
+const PROJECT_BIN = path.join(process.cwd(), 'node_modules', '.bin');
 const CHILD_ENV: NodeJS.ProcessEnv = {
   ...process.env,
   PATH: [
-    `${HOME}/.local/bin`,          // pip install --user (Render)
+    PROJECT_BIN,                    // project-local (Render deploy artifact)
+    `${HOME}/.local/bin`,           // pip install --user
     '/opt/homebrew/bin',            // macOS Homebrew
     '/usr/local/bin',
     '/usr/bin',
@@ -46,6 +48,7 @@ function resolveYtDlpCommand(): YtDlpCommand {
   }
 
   const candidates = [
+    path.join(PROJECT_BIN, 'yt-dlp'),  // project-local (Render deploy)
     `${HOME}/.local/bin/yt-dlp`,
     '/opt/homebrew/bin/yt-dlp',
     '/usr/local/bin/yt-dlp',
