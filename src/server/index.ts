@@ -11,15 +11,28 @@ import { matchMetadata } from './metadataMatch';
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
 const DOWNLOAD_DIR = path.join(process.cwd(), 'downloads');
-const DB_PATH = process.env.DB_PATH
-  ? path.resolve(process.env.DB_PATH)
-  : path.join(process.cwd(), 'server-data.sqlite');
 
-const dbDir = path.dirname(DB_PATH);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+function resolveDatabasePath() {
+  const configured = process.env.DB_PATH
+    ? path.resolve(process.env.DB_PATH)
+    : path.join(process.cwd(), 'server-data.sqlite');
+
+  const configuredDir = path.dirname(configured);
+  try {
+    fs.mkdirSync(configuredDir, { recursive: true });
+    return configured;
+  } catch (err: any) {
+    if (process.env.DB_PATH) {
+      console.warn(`[db] DB_PATH not writable (${configuredDir}): ${err?.code || err?.message}. Falling back to /tmp.`);
+      const fallback = '/tmp/aura-server-data.sqlite';
+      fs.mkdirSync(path.dirname(fallback), { recursive: true });
+      return fallback;
+    }
+    throw err;
+  }
 }
 
+const DB_PATH = resolveDatabasePath();
 const db = new Database(DB_PATH);
 
 db.pragma('journal_mode = WAL');
