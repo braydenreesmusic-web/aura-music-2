@@ -122,6 +122,27 @@ function AppInner() {
   }, []);
 
   React.useEffect(() => {
+    const syncAuthState = () => {
+      const token = accountSync.getToken();
+      if (!token) {
+        setUser(null);
+        return;
+      }
+      accountSync.me().then(setUser).catch((err) => {
+        if (isUnauthorizedError(err)) {
+          accountSync.clearToken();
+          setUser(null);
+        }
+      });
+    };
+
+    window.addEventListener(accountSync.authEventName, syncAuthState as EventListener);
+    return () => {
+      window.removeEventListener(accountSync.authEventName, syncAuthState as EventListener);
+    };
+  }, []);
+
+  React.useEffect(() => {
     localStorage.setItem(THEME_MODE_KEY, themeMode);
   }, [themeMode]);
 

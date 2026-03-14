@@ -67,6 +67,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if ((res.status === 401 || res.status === 403) && token) {
+      setToken(null);
+    }
     throw new AccountSyncError(data?.error || `Request failed (${res.status})`, {
       code: 'HTTP',
       status: res.status,

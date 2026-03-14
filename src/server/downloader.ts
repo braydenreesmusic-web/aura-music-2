@@ -89,6 +89,25 @@ export interface DownloadResult {
   fileUrl: string;
 }
 
+function normalizeDownloadErrorMessage(message: string): string {
+  const lower = message.toLowerCase();
+  const botCheckHints = [
+    'sign in to confirm',
+    "you\'re not a bot",
+    'you are not a bot',
+    'bot',
+    '429',
+    'too many requests',
+    'captcha',
+  ];
+
+  if (botCheckHints.some((hint) => lower.includes(hint))) {
+    return 'YouTube is blocking this download with an anti-bot check. This is separate from your Aura account login. Try another video, wait a few minutes, or retry after backend redeploy.';
+  }
+
+  return message;
+}
+
 /**
  * Download using yt-dlp (system binary) — far more reliable than ytdl-core.
  */
@@ -163,7 +182,7 @@ export async function downloadMedia(
       // yt-dlp may add extensions — find the actual file
       const actualFile = findOutputFile(downloadDir, safeTitle, ext);
       if (code !== 0 || !actualFile) {
-        reject(new Error(stderr.trim() || `yt-dlp exited with code ${code}`));
+        reject(new Error(normalizeDownloadErrorMessage(stderr.trim() || `yt-dlp exited with code ${code}`)));
         return;
       }
 
@@ -201,7 +220,7 @@ export async function downloadMedia(
     });
 
     proc.on('error', (err) => {
-      reject(new Error(`Failed to spawn yt-dlp command (${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')}): ${err.message}`));
+      reject(new Error(normalizeDownloadErrorMessage(`Failed to spawn yt-dlp command (${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')}): ${err.message}`)));
     });
   });
 }
@@ -212,7 +231,13 @@ async function downloadWithYtdlCore(
   downloadDir: string,
   onProgress: (percent: number) => void,
 ): Promise<DownloadResult> {
-  const info = await ytdl.getInfo(url);
+  let info: ytdl.videoInfo;
+  try {
+    info = await ytdl.getInfo(url);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(normalizeDownloadErrorMessage(`ytdl-core metadata failed: ${message}`));
+  }
   const meta = getMetadataFromYtdlInfo(info);
   const safeTitle = meta.title.replace(/[<>:"/\\|?*]/g, '_').slice(0, 200);
 
@@ -241,7 +266,7 @@ async function downloadWithYtdlCore(
     stream.on('error', (err) => {
       out.destroy();
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      reject(new Error(`ytdl-core download failed: ${err.message}`));
+      reject(new Error(normalizeDownloadErrorMessage(`ytdl-core download failed: ${err.message}`)));
     });
 
     out.on('error', (err) => {
