@@ -1,26 +1,11 @@
-import { spawn, execFileSync } from 'child_process';
+import { spawn, execFileSync, type SpawnOptionsWithoutStdio } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-// Resolve the absolute path to yt-dlp at startup so the server works even when
-// launched without /opt/homebrew/bin in PATH (e.g. via npm scripts, VS Code tasks).
-function resolveytDlp(): string {
-  const candidates = [
-    '/opt/homebrew/bin/yt-dlp',
-    '/usr/local/bin/yt-dlp',
-    '/usr/bin/yt-dlp',
-  ];
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
-  }
-  try {
-    return execFileSync('which', ['yt-dlp'], { encoding: 'utf8' }).trim();
-  } catch {
-    return 'yt-dlp'; // fall back and let the OS search PATH
-  }
-}
-
-const YT_DLP = resolveytDlp();
+type YtDlpCommand = {
+  command: string;
+  prefixArgs: string[];
+};
 
 // Ensure Homebrew & common binary dirs are on PATH for child processes (ffmpeg, etc.).
 const CHILD_ENV: NodeJS.ProcessEnv = {
@@ -33,6 +18,64 @@ const CHILD_ENV: NodeJS.ProcessEnv = {
     process.env.PATH ?? '',
   ].join(':'),
 };
+
+function canExecute(command: string, args: string[]): boolean {
+  try {
+    execFileSync(command, args, {
+      encoding: 'utf8',
+      stdio: 'ignore',
+      env: CHILD_ENV,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Resolve the best available yt-dlp invocation at startup.
+function resolveYtDlpCommand(): YtDlpCommand {
+  const explicit = process.env.YT_DLP_BIN?.trim();
+  if (explicit && canExecute(explicit, ['--version'])) {
+    return { command: explicit, prefixArgs: [] };
+  }
+
+  const candidates = [
+    '/opt/homebrew/bin/yt-dlp',
+    '/usr/local/bin/yt-dlp',
+    '/usr/bin/yt-dlp',
+    '/bin/yt-dlp',
+  ];
+
+  for (const c of candidates) {
+    if (fs.existsSync(c) && canExecute(c, ['--version'])) {
+      return { command: c, prefixArgs: [] };
+    }
+  }
+
+  try {
+    const detected = execFileSync('which', ['yt-dlp'], { encoding: 'utf8', env: CHILD_ENV }).trim();
+    if (detected && canExecute(detected, ['--version'])) {
+      return { command: detected, prefixArgs: [] };
+    }
+  } catch {
+    // Keep checking fallbacks.
+  }
+
+  if (canExecute('python3', ['-m', 'yt_dlp', '--version'])) {
+    return { command: 'python3', prefixArgs: ['-m', 'yt_dlp'] };
+  }
+
+  return { command: 'yt-dlp', prefixArgs: [] };
+}
+
+const YT_DLP = resolveYtDlpCommand();
+
+function spawnYtDlp(args: string[], options?: SpawnOptionsWithoutStdio) {
+  return spawn(YT_DLP.command, [...YT_DLP.prefixArgs, ...args], {
+    ...options,
+    env: CHILD_ENV,
+  });
+}
 
 export interface DownloadResult {
   filename: string;
@@ -89,7 +132,7 @@ export async function downloadMedia(
   );
 
   return new Promise((resolve, reject) => {
-    const proc = spawn(YT_DLP, args, { cwd: downloadDir, env: CHILD_ENV });
+    const proc = spawnYtDlp(args, { cwd: downloadDir });
     let lastProgress = 0;
     let stderr = '';
 
@@ -152,7 +195,7 @@ export async function downloadMedia(
     });
 
     proc.on('error', (err) => {
-      reject(new Error(`Failed to spawn yt-dlp: ${err.message}. Is yt-dlp installed?`));
+      reject(new Error(`Failed to spawn yt-dlp command (${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')}): ${err.message}`));
     });
   });
 }
@@ -176,7 +219,7 @@ interface VideoMeta {
 
 function getMetadata(url: string): Promise<VideoMeta> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(YT_DLP, ['--dump-json', '--no-playlist', '--no-warnings', url], { env: CHILD_ENV });
+    const proc = spawnYtDlp(['--dump-json', '--no-playlist', '--no-warnings', url]);
     let stdout = '';
     let stderr = '';
 
@@ -202,7 +245,7 @@ function getMetadata(url: string): Promise<VideoMeta> {
     });
 
     proc.on('error', (err) => {
-      reject(new Error(`yt-dlp not found: ${err.message}`));
+      reject(new Error(`yt-dlp command unavailable (${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')}): ${err.message}`));
     });
   });
 }
