@@ -225,14 +225,13 @@ export async function downloadMedia(
 
   if (format === 'audio') {
     args.push(
-      '-f', 'ba/ba*/b',             // best audio, fallback to any audio, fallback to best overall
       '-x',                          // extract audio
       '--audio-format', 'mp3',       // convert to mp3
       '--audio-quality', '0',        // best quality
     );
   } else {
     args.push(
-      '-f', 'bv*+ba/bv*+ba*/b',    // best video+audio, fallback to best overall
+      '-f', 'b',                     // best single format (pre-merged, most compatible)
       '--merge-output-format', 'mp4',
     );
   }
