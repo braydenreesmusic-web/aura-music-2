@@ -62,7 +62,7 @@ git init
 git add .
 git commit -m "Initial deploy-ready commit"
 git branch -M main
-git remote add origin https://github.com/<your-user>/<your-repo>.git
+git remote add origin https://github.com/braydenreesmusic-web/aura-music-2.git
 git push -u origin main
 ```
 
