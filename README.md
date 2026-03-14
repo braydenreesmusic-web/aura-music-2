@@ -55,6 +55,48 @@ Copy from `.env.example` and set values in hosting dashboards:
    - `PORT` (host usually injects this)
    - `NODE_ENV=production`
    - `DB_PATH` (recommended in production, example: `/var/data/server-data.sqlite`)
+   - `YOUTUBE_COOKIES_B64` (see YouTube Cookie Setup below)
+
+## YouTube Cookie Setup
+
+YouTube blocks downloads from cloud server IPs unless you provide authentication cookies. This is a one-time ~2 minute setup.
+
+### Step 1: Export cookies (do this on your personal computer)
+
+1. Open a **new Incognito / Private Browsing** window
+2. Go to [youtube.com](https://youtube.com) and **sign in** (use a throwaway Google account if you prefer)
+3. In the **same tab**, navigate to `https://www.youtube.com/robots.txt`
+4. Use the [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc) browser extension → click it → **Export**
+5. Save the file as `cookies.txt`
+6. **Close the Incognito window** immediately (don't browse YouTube in it again — this prevents cookie rotation)
+
+### Step 2: Base64-encode and add to Render
+
+Run this in your terminal:
+
+```bash
+base64 < cookies.txt | tr -d '\n'
+```
+
+Copy the output, then in Render dashboard → **Environment** tab:
+- **Key**: `YOUTUBE_COOKIES_B64`
+- **Value**: paste the base64 string
+
+Save → Render redeploys automatically.
+
+### Step 3: Verify
+
+```
+curl https://aura-music-api.onrender.com/api/health
+```
+
+Should show `"ytCookies": true`. Downloads should now work.
+
+### Troubleshooting
+
+- If downloads stop working after a few weeks, your cookies may have expired. Repeat steps 1–2.
+- Use a throwaway Google account to avoid risk to your main account.
+- Alternative: set `YOUTUBE_COOKIES` env var with the raw cookie text (but base64 is easier for multi-line content).
 
 ## Push to GitHub
 

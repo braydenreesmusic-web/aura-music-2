@@ -28,15 +28,43 @@ const CHILD_ENV: NodeJS.ProcessEnv = {
 };
 
 // ── YouTube cookie authentication ───────────────────────────────
-// Set YOUTUBE_COOKIES env var to the contents of a Netscape-format cookies.txt
-// to bypass YouTube's anti-bot checks on cloud server IPs.
+// Bypass YouTube's anti-bot checks on cloud server IPs.
+//
+// Option A (easiest): base64-encode your cookies.txt and set YOUTUBE_COOKIES_B64
+// Option B: paste raw Netscape cookie-jar text into YOUTUBE_COOKIES
+// Option C: place a cookies.txt file in the project root
+//
+// Export instructions (one-time, ~2 minutes):
+//   1. Open a NEW Incognito/Private window → log into youtube.com
+//   2. In the SAME tab, go to https://www.youtube.com/robots.txt
+//   3. Use "Get cookies.txt LOCALLY" extension → export youtube.com cookies
+//   4. Run:  base64 -w0 < cookies.txt   (Linux/Mac)
+//   5. Paste the output as YOUTUBE_COOKIES_B64 env var on Render
+//   6. Close the incognito window (never reopen that session)
 const COOKIES_PATH = path.join(process.cwd(), '.yt-cookies.txt');
 let HAS_COOKIES = false;
 
 function initCookies(): void {
-  // Priority 1: YOUTUBE_COOKIES env var (paste cookie contents directly)
+  // Priority 1: base64-encoded cookies (safest for env vars — no newline issues)
+  const b64 = process.env.YOUTUBE_COOKIES_B64?.trim();
+  if (b64) {
+    try {
+      const decoded = Buffer.from(b64, 'base64').toString('utf8');
+      if (decoded.includes('.youtube.com') || decoded.includes('#HttpOnly_')) {
+        fs.writeFileSync(COOKIES_PATH, decoded, 'utf8');
+        HAS_COOKIES = true;
+        console.log('[downloader] YouTube cookies loaded from YOUTUBE_COOKIES_B64 env var');
+        return;
+      }
+      console.warn('[downloader] YOUTUBE_COOKIES_B64 decoded but doesn\'t look like a cookie file — skipping');
+    } catch (err) {
+      console.warn('[downloader] Failed to decode YOUTUBE_COOKIES_B64:', err);
+    }
+  }
+
+  // Priority 2: raw cookie text in env var
   const envCookies = process.env.YOUTUBE_COOKIES?.trim();
-  if (envCookies) {
+  if (envCookies && (envCookies.includes('.youtube.com') || envCookies.includes('#HttpOnly_'))) {
     try {
       fs.writeFileSync(COOKIES_PATH, envCookies, 'utf8');
       HAS_COOKIES = true;
@@ -47,22 +75,23 @@ function initCookies(): void {
     }
   }
 
-  // Priority 2: cookies file already on disk (e.g. mounted volume)
+  // Priority 3: cookies file already on disk (e.g. mounted volume)
   const envPath = process.env.YOUTUBE_COOKIES_FILE?.trim();
   const candidates = [envPath, COOKIES_PATH, path.join(process.cwd(), 'cookies.txt')].filter(Boolean) as string[];
   for (const p of candidates) {
-    if (fs.existsSync(p) && fs.statSync(p).size > 50) {
-      if (p !== COOKIES_PATH) {
-        fs.copyFileSync(p, COOKIES_PATH);
+    try {
+      if (fs.existsSync(p) && fs.statSync(p).size > 50) {
+        if (p !== COOKIES_PATH) fs.copyFileSync(p, COOKIES_PATH);
+        HAS_COOKIES = true;
+        console.log(`[downloader] YouTube cookies loaded from ${p}`);
+        return;
       }
-      HAS_COOKIES = true;
-      console.log(`[downloader] YouTube cookies loaded from ${p}`);
-      return;
-    }
+    } catch { /* skip unreadable */ }
   }
 
   console.warn('[downloader] No YouTube cookies configured — downloads may be blocked on cloud IPs.');
-  console.warn('[downloader] Set YOUTUBE_COOKIES env var with Netscape cookie-jar contents to fix this.');
+  console.warn('[downloader] Set YOUTUBE_COOKIES_B64 env var (base64 of cookies.txt) to fix this.');
+  console.warn('[downloader] See README → "YouTube Cookie Setup" for a 2-minute walkthrough.');
 }
 
 initCookies();
