@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --strictPort --port=3000 --host=0.0.0.0",
-    "server": "export PATH=/opt/homebrew/bin:/usr/local/bin:$PATH && tsx src/server/index.ts",
-    "start:server": "export PATH=/opt/homebrew/bin:/usr/local/bin:$PATH && tsx src/server/index.ts",
+    "server": "export PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH && tsx src/server/index.ts",
+    "start:server": "export PATH=$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH && tsx src/server/index.ts",
     "start": "npm run start:server",
     "dev:all": "npm run server & npm run dev",
     "build": "vite build",

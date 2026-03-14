@@ -134,11 +134,23 @@ Recommended Railway env vars:
 - `PORT` (optional; Railway usually injects this)
 - `DB_PATH=/var/data/server-data.sqlite` (or your mounted persistent disk path)
 
-Recommended Render env vars:
-- `NODE_ENV=production`
-- `DB_PATH=/var/data/server-data.sqlite`
+### Deploy backend on Render (free tier)
 
-Then attach a persistent disk mounted at `/var/data`.
+1. Create a new Web Service from the GitHub repo.
+2. **Runtime**: `Node`
+3. **Build Command**: `bash render-build.sh`
+4. **Start Command**: `export PATH=$HOME/.local/bin:/usr/local/bin:$PATH && npx tsx src/server/index.ts`
+5. Add env vars:
+   - `NODE_ENV=production`
+   - `YTDL_NO_UPDATE=1`
+6. Do **NOT** set `DB_PATH` unless you attach a persistent disk (free tier has no persistent disk — the server auto-falls-back to a writable path).
+7. Deploy. Check logs for:
+   ```
+   [downloader] yt-dlp found: /home/user/.local/bin/yt-dlp
+   🎵 reesr server running on port 10000
+   ```
+
+> **Note**: On Render free tier the DB resets on each redeploy (no persistent disk). Users will need to re-create their account after each deploy. For durable storage, upgrade to a paid plan and attach a persistent disk mounted at `/var/data`, then set `DB_PATH=/var/data/server-data.sqlite`.
 
 If downloads/search fail on backend:
 - Open Railway logs and check for `yt-dlp not found` or `ffmpeg` errors.

@@ -9,15 +9,16 @@ type YtDlpCommand = {
 };
 
 // Ensure Homebrew & common binary dirs are on PATH for child processes (ffmpeg, etc.).
+const HOME = process.env.HOME || '/root';
 const CHILD_ENV: NodeJS.ProcessEnv = {
   ...process.env,
   PATH: [
-    '/opt/homebrew/bin',
+    `${HOME}/.local/bin`,          // pip install --user (Render)
+    '/opt/homebrew/bin',            // macOS Homebrew
     '/usr/local/bin',
     '/usr/bin',
     '/bin',
-    // Python pip --break-system-packages may install here
-    '/root/.local/bin',
+    '/root/.local/bin',             // Docker root user
     process.env.PATH ?? '',
   ].join(':'),
   // Suppress ytdl-core update-check 403 noise
@@ -45,6 +46,7 @@ function resolveYtDlpCommand(): YtDlpCommand {
   }
 
   const candidates = [
+    `${HOME}/.local/bin/yt-dlp`,
     '/opt/homebrew/bin/yt-dlp',
     '/usr/local/bin/yt-dlp',
     '/usr/bin/yt-dlp',

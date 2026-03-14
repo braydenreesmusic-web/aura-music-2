@@ -3,15 +3,15 @@
 services:
   - type: web
     name: aura-music-api
-    runtime: docker
+    runtime: node
     repo: https://github.com/braydenreesmusic-web/aura-music-2
     branch: main
     plan: free
+    buildCommand: bash render-build.sh
+    startCommand: "export PATH=$HOME/.local/bin:/usr/local/bin:$PATH && npx tsx src/server/index.ts"
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: YTDL_NO_UPDATE
         value: "1"
-      # DB_PATH and DOWNLOAD_DIR are set in Dockerfile defaults
-      # Override here only if you add a persistent disk
