@@ -232,20 +232,17 @@ export async function downloadMedia(
       args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
       ext = 'mp3';
     } else {
-      // No ffmpeg — download best audio in native format (m4a/webm/opus)
-      args.push('-f', 'bestaudio[ext=m4a]/bestaudio/best');
       ext = 'm4a';
     }
   } else {
     if (HAS_FFMPEG) {
-      args.push('-f', 'bestvideo+bestaudio/best', '--merge-output-format', 'mp4');
-      ext = 'mp4';
-    } else {
-      // No ffmpeg — download best pre-muxed format
-      args.push('-f', 'best[ext=mp4]/best');
-      ext = 'mp4';
+      args.push('--merge-output-format', 'mp4');
     }
+    ext = 'mp4';
   }
+  // NOTE: no -f flag — let yt-dlp auto-select the best available format.
+  // Explicit format selectors like "bestvideo+bestaudio" can fail on the
+  // standalone binary depending on version / available streams.
 
   const filename = `${safeTitle}.${ext}`;
   const filePath = path.join(downloadDir, filename);
@@ -263,6 +260,7 @@ export async function downloadMedia(
   );
 
   return new Promise((resolve, reject) => {
+    console.log(`[downloader] running: yt-dlp ${args.join(' ')}`);
     const proc = spawnYtDlp(args, { cwd: downloadDir });
     let lastProgress = 0;
     let stderr = '';
