@@ -1,6 +1,7 @@
 import { spawn, execFileSync, type SpawnOptionsWithoutStdio } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import ytdl from '@distube/ytdl-core';
 
 type YtDlpCommand = {
   command: string;
@@ -69,6 +70,7 @@ function resolveYtDlpCommand(): YtDlpCommand {
 }
 
 const YT_DLP = resolveYtDlpCommand();
+const HAS_YT_DLP = canExecute(YT_DLP.command, [...YT_DLP.prefixArgs, '--version']);
 
 function spawnYtDlp(args: string[], options?: SpawnOptionsWithoutStdio) {
   return spawn(YT_DLP.command, [...YT_DLP.prefixArgs, ...args], {
@@ -96,6 +98,10 @@ export async function downloadMedia(
   downloadDir: string,
   onProgress: (percent: number) => void,
 ): Promise<DownloadResult> {
+  if (!HAS_YT_DLP) {
+    return downloadWithYtdlCore(url, format, downloadDir, onProgress);
+  }
+
   // First get video metadata via yt-dlp --dump-json
   const meta = await getMetadata(url);
   const safeTitle = meta.title.replace(/[<>:"/\\|?*]/g, '_').slice(0, 200);
@@ -197,6 +203,98 @@ export async function downloadMedia(
     proc.on('error', (err) => {
       reject(new Error(`Failed to spawn yt-dlp command (${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')}): ${err.message}`));
     });
+  });
+}
+
+async function downloadWithYtdlCore(
+  url: string,
+  format: 'audio' | 'video',
+  downloadDir: string,
+  onProgress: (percent: number) => void,
+): Promise<DownloadResult> {
+  const info = await ytdl.getInfo(url);
+  const meta = getMetadataFromYtdlInfo(info);
+  const safeTitle = meta.title.replace(/[<>:"/\\|?*]/g, '_').slice(0, 200);
+
+  const selectedFormat = selectYtdlFormat(info, format);
+  const ext = selectedFormat.container || (format === 'video' ? 'mp4' : 'm4a');
+  const filename = `${safeTitle}.${ext}`;
+  const filePath = path.join(downloadDir, filename);
+
+  return new Promise((resolve, reject) => {
+    const stream = ytdl.downloadFromInfo(info, {
+      format: selectedFormat,
+      highWaterMark: 1 << 25,
+    });
+    const out = fs.createWriteStream(filePath);
+    let lastProgress = 0;
+
+    stream.on('progress', (_chunkLength: number, downloaded: number, total: number) => {
+      if (!total) return;
+      const pct = Math.round((downloaded / total) * 100);
+      if (pct > lastProgress) {
+        lastProgress = pct;
+        onProgress(pct);
+      }
+    });
+
+    stream.on('error', (err) => {
+      out.destroy();
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      reject(new Error(`ytdl-core download failed: ${err.message}`));
+    });
+
+    out.on('error', (err) => {
+      stream.destroy();
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      reject(new Error(`Failed writing download file: ${err.message}`));
+    });
+
+    out.on('finish', () => {
+      onProgress(100);
+      resolve({
+        filename,
+        title: meta.title,
+        artist: meta.artist,
+        thumbnail: meta.thumbnail,
+        duration: meta.duration,
+        format,
+        fileUrl: `/api/file/${encodeURIComponent(filename)}`,
+      });
+    });
+
+    stream.pipe(out);
+  });
+}
+
+function getMetadataFromYtdlInfo(info: ytdl.videoInfo): VideoMeta {
+  const details = info.videoDetails;
+  return {
+    title: details.title || 'Unknown',
+    artist: details.author?.name || details.ownerChannelName || 'Unknown Artist',
+    thumbnail: details.thumbnails?.[details.thumbnails.length - 1]?.url || '',
+    duration: parseInt(details.lengthSeconds || '0', 10) || 0,
+  };
+}
+
+function selectYtdlFormat(info: ytdl.videoInfo, format: 'audio' | 'video'): ytdl.videoFormat {
+  if (format === 'audio') {
+    return ytdl.chooseFormat(info.formats, {
+      filter: 'audioonly',
+      quality: 'highestaudio',
+    });
+  }
+
+  const mp4Muxed = info.formats
+    .filter((f) => f.hasVideo && f.hasAudio && f.container === 'mp4')
+    .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+  if (mp4Muxed.length > 0) {
+    return mp4Muxed[0];
+  }
+
+  return ytdl.chooseFormat(info.formats, {
+    filter: 'audioandvideo',
+    quality: 'highest',
   });
 }
 
