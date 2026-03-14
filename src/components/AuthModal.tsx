@@ -22,7 +22,12 @@ export const AuthModal: React.FC<{
       onSignedIn(user);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to authenticate');
+      const message = err instanceof Error ? err.message : 'Failed to authenticate';
+      if (message.toLowerCase().includes('invalid credentials')) {
+        setError('Invalid email/password. If backend redeployed on free hosting, your account may have reset — try Create Account again.');
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }

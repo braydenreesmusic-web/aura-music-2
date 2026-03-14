@@ -54,6 +54,7 @@ Copy from `.env.example` and set values in hosting dashboards:
 - Backend env:
    - `PORT` (host usually injects this)
    - `NODE_ENV=production`
+   - `DB_PATH` (recommended in production, example: `/var/data/server-data.sqlite`)
 
 ## Push to GitHub
 
@@ -131,6 +132,13 @@ git push
 Recommended Railway env vars:
 - `NODE_ENV=production`
 - `PORT` (optional; Railway usually injects this)
+- `DB_PATH=/var/data/server-data.sqlite` (or your mounted persistent disk path)
+
+Recommended Render env vars:
+- `NODE_ENV=production`
+- `DB_PATH=/var/data/server-data.sqlite`
+
+Then attach a persistent disk mounted at `/var/data`.
 
 If downloads/search fail on backend:
 - Open Railway logs and check for `yt-dlp not found` or `ffmpeg` errors.

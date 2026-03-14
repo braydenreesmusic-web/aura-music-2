@@ -11,7 +11,15 @@ import { matchMetadata } from './metadataMatch';
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
 const DOWNLOAD_DIR = path.join(process.cwd(), 'downloads');
-const DB_PATH = path.join(process.cwd(), 'server-data.sqlite');
+const DB_PATH = process.env.DB_PATH
+  ? path.resolve(process.env.DB_PATH)
+  : path.join(process.cwd(), 'server-data.sqlite');
+
+const dbDir = path.dirname(DB_PATH);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
 const db = new Database(DB_PATH);
 
 db.pragma('journal_mode = WAL');
