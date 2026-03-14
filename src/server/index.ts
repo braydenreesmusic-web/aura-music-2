@@ -5,7 +5,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
 import { searchYouTube, getVideoInfo } from './youtube';
-import { downloadMedia } from './downloader';
+import { downloadMedia, hasCookies } from './downloader';
 import { matchMetadata } from './metadataMatch';
 
 const app = express();
@@ -135,7 +135,7 @@ app.use(express.json({ limit: '8mb' }));
 app.use('/downloads', express.static(DOWNLOAD_DIR));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, ts: Date.now() });
+  res.json({ ok: true, ts: Date.now(), ytCookies: hasCookies });
 });
 
 function hashPassword(password: string, salt: string) {

@@ -27,6 +27,53 @@ const CHILD_ENV: NodeJS.ProcessEnv = {
   YTDL_NO_UPDATE: '1',
 };
 
+// ── YouTube cookie authentication ───────────────────────────────
+// Set YOUTUBE_COOKIES env var to the contents of a Netscape-format cookies.txt
+// to bypass YouTube's anti-bot checks on cloud server IPs.
+const COOKIES_PATH = path.join(process.cwd(), '.yt-cookies.txt');
+let HAS_COOKIES = false;
+
+function initCookies(): void {
+  // Priority 1: YOUTUBE_COOKIES env var (paste cookie contents directly)
+  const envCookies = process.env.YOUTUBE_COOKIES?.trim();
+  if (envCookies) {
+    try {
+      fs.writeFileSync(COOKIES_PATH, envCookies, 'utf8');
+      HAS_COOKIES = true;
+      console.log('[downloader] YouTube cookies loaded from YOUTUBE_COOKIES env var');
+      return;
+    } catch (err) {
+      console.warn('[downloader] Failed to write cookies file:', err);
+    }
+  }
+
+  // Priority 2: cookies file already on disk (e.g. mounted volume)
+  const envPath = process.env.YOUTUBE_COOKIES_FILE?.trim();
+  const candidates = [envPath, COOKIES_PATH, path.join(process.cwd(), 'cookies.txt')].filter(Boolean) as string[];
+  for (const p of candidates) {
+    if (fs.existsSync(p) && fs.statSync(p).size > 50) {
+      if (p !== COOKIES_PATH) {
+        fs.copyFileSync(p, COOKIES_PATH);
+      }
+      HAS_COOKIES = true;
+      console.log(`[downloader] YouTube cookies loaded from ${p}`);
+      return;
+    }
+  }
+
+  console.warn('[downloader] No YouTube cookies configured — downloads may be blocked on cloud IPs.');
+  console.warn('[downloader] Set YOUTUBE_COOKIES env var with Netscape cookie-jar contents to fix this.');
+}
+
+initCookies();
+
+/** Args to inject into every yt-dlp call for authentication */
+function cookieArgs(): string[] {
+  return HAS_COOKIES ? ['--cookies', COOKIES_PATH] : [];
+}
+
+export { HAS_COOKIES as hasCookies };
+
 function canExecute(command: string, args: string[]): boolean {
   try {
     execFileSync(command, args, {
@@ -89,7 +136,7 @@ if (HAS_YT_DLP) {
 }
 
 function spawnYtDlp(args: string[], options?: SpawnOptionsWithoutStdio) {
-  return spawn(YT_DLP.command, [...YT_DLP.prefixArgs, ...args], {
+  return spawn(YT_DLP.command, [...YT_DLP.prefixArgs, ...cookieArgs(), ...args], {
     ...options,
     env: CHILD_ENV,
   });
