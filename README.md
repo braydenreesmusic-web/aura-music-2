@@ -1,0 +1,173 @@
+# reesr
+
+A modern local-first music player with:
+- inline/fullscreen video playback
+- discovery + server-side downloading
+- account sync
+- cloud-aware tracks (online stream + optional offline download)
+- PWA support for phone install
+
+## Tech Stack
+
+- Frontend: `React` + `TypeScript` + `Vite`
+- Backend: `Express` + `better-sqlite3`
+- Local app storage: `IndexedDB` (tracks/albums/playlists)
+- Download pipeline: `yt-dlp` via backend
+
+## Local Development
+
+Prerequisites:
+- Node.js 20+
+- `yt-dlp` installed and available on `PATH`
+
+Install:
+
+```bash
+npm install
+```
+
+Run backend:
+
+```bash
+npm run server
+```
+
+Run frontend:
+
+```bash
+npm run dev -- --host 127.0.0.1 --port 3000
+```
+
+Quality checks:
+
+```bash
+npm run lint
+npm run build
+```
+
+## Environment Variables
+
+Copy from `.env.example` and set values in hosting dashboards:
+
+- Frontend env:
+   - `VITE_API_BASE_URL` (example: `https://api.your-domain.com/api`)
+- Backend env:
+   - `PORT` (host usually injects this)
+   - `NODE_ENV=production`
+
+## Push to GitHub
+
+```bash
+git init
+git add .
+git commit -m "Initial deploy-ready commit"
+git branch -M main
+git remote add origin https://github.com/<your-user>/<your-repo>.git
+git push -u origin main
+```
+
+CI is included at `.github/workflows/ci.yml` and runs lint + build on push/PR.
+
+## Recommended Production Architecture
+
+Use this split setup:
+
+- Frontend: `Vercel`
+- Backend API: `Railway` or `Render`
+- Domain:
+   - `app.your-domain.com` → frontend
+   - `api.your-domain.com` → backend
+
+### Why this setup
+
+- Fast frontend deploys
+- Simple backend deploy with persistent service URL
+- Clean API separation for mobile and web clients
+
+## Domain + DNS Setup
+
+At your DNS provider:
+
+- Add `CNAME` for `app` pointing to frontend host target
+- Add `CNAME` for `api` pointing to backend host target
+- Optionally redirect apex domain to `app.your-domain.com`
+
+Set frontend env:
+- `VITE_API_BASE_URL=https://api.your-domain.com/api`
+
+## Deploy Now (Fast Path)
+
+### 1) Push to GitHub
+
+```bash
+git add .
+git commit -m "Deploy-ready setup"
+git push
+```
+
+### 2) Deploy frontend on Vercel
+
+1. Import your GitHub repo in Vercel.
+2. Framework preset: `Vite`.
+3. Build command: `npm run build`.
+4. Output directory: `dist`.
+5. Add env var:
+   - `VITE_API_BASE_URL=https://api.your-domain.com/api`
+6. Deploy.
+
+### 3) Deploy backend on Railway
+
+1. Create new Railway project from same GitHub repo.
+2. Service root: repository root.
+3. Railway auto-detects `railway.toml` and runs:
+   - `startCommand = npm run start:server`
+4. Add persistent volume mounted to project directory so SQLite + downloads persist.
+5. Confirm health endpoint:
+   - `/api/health`
+
+### 4) Point your domain
+
+At your DNS provider:
+- `app.your-domain.com` → Vercel target (`CNAME`)
+- `api.your-domain.com` → Railway target (`CNAME`)
+
+Then update Vercel env if needed:
+- `VITE_API_BASE_URL=https://api.your-domain.com/api`
+
+### 5) Verify from phone
+
+1. Open `https://app.your-domain.com`
+2. Sign in
+3. Confirm cloud tracks appear online
+4. Tap cloud-download icon for offline copy
+5. Add to Home Screen (PWA install)
+
+## Phone Usage (PWA)
+
+Once deployed on HTTPS:
+
+- iPhone (Safari): Share → Add to Home Screen
+- Android (Chrome): Install App / Add to Home Screen
+
+Behavior model:
+- Offline: local downloaded/imported tracks only
+- Online + signed in: cloud tracks visible and playable
+- Online + not downloaded: user gets download option for offline use
+
+## Important Storage Note
+
+Current backend stores media under `downloads/` and metadata in SQLite.
+
+For reliable long-term cloud playback across devices, use persistent storage:
+
+- Good now: Railway/Render persistent disk + SQLite
+- Best at scale: object storage (S3/R2) + Postgres metadata
+
+## Next Upgrade Path (Optional)
+
+If you want to scale beyond single-server disk storage:
+
+1. Move media files from local disk to S3/R2
+2. Store media URLs + metadata in Postgres
+3. Keep IndexedDB for per-device offline cache
+4. Add background sync for queued offline downloads

@@ -1,0 +1,223 @@
+@import "tailwindcss";
+
+:root {
+  --aura-bg: #09090b;
+  --aura-fg: #d4d4d8;
+  --aura-accent-rgb: 99 102 241;
+  --aura-video-rgb: 99 102 241;
+}
+
+:root[data-theme='light'] {
+  --aura-bg: #f5f7fb;
+  --aura-fg: #18181b;
+}
+
+.aura-shell {
+  background: var(--aura-bg);
+  color: var(--aura-fg);
+}
+
+.aura-library-video-ambient {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.04);
+  filter: blur(52px) saturate(1.02) brightness(0.52);
+  opacity: 0.2;
+}
+
+.aura-library-video-depth {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 12%, rgb(var(--aura-video-rgb) / 0.05), transparent 34%),
+    linear-gradient(180deg, rgb(9 9 11 / 0.08) 0%, rgb(9 9 11 / 0.16) 52%, rgb(9 9 11 / 0.28) 100%);
+}
+
+.aura-library-video-mask {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 14%, rgb(var(--aura-video-rgb) / 0.06), transparent 40%),
+    radial-gradient(circle at 84% 74%, rgb(var(--aura-video-rgb) / 0.05), transparent 44%),
+    linear-gradient(180deg, rgb(9 9 11 / 0.06) 0%, rgb(9 9 11 / 0.12) 56%, rgb(9 9 11 / 0.22) 100%);
+}
+
+.aura-library-video-sheen {
+  position: absolute;
+  inset: -20% -30%;
+  opacity: 0.12;
+  background: linear-gradient(115deg, transparent 24%, rgb(var(--aura-video-rgb) / 0.14) 50%, transparent 76%);
+  filter: blur(70px);
+  animation: aura-ambient-drift 18s ease-in-out infinite alternate;
+}
+
+@keyframes aura-ambient-drift {
+  from {
+    transform: translate3d(-6%, -2%, 0);
+  }
+  to {
+    transform: translate3d(6%, 2%, 0);
+  }
+}
+
+.aura-accent-wash {
+  z-index: 1;
+  background:
+    radial-gradient(circle at 12% 8%, rgb(var(--aura-accent-rgb) / 0.14), transparent 38%),
+    radial-gradient(circle at 85% 22%, rgb(var(--aura-accent-rgb) / 0.12), transparent 44%),
+    radial-gradient(circle at 50% 100%, rgb(var(--aura-accent-rgb) / 0.08), transparent 48%);
+}
+
+.aura-video-wash {
+  z-index: 1;
+  background:
+    radial-gradient(circle at 18% 78%, rgb(var(--aura-video-rgb) / 0.14), transparent 42%),
+    radial-gradient(circle at 78% 22%, rgb(var(--aura-video-rgb) / 0.16), transparent 44%),
+    radial-gradient(circle at 50% 50%, rgb(var(--aura-video-rgb) / 0.07), transparent 55%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Range input styling */
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+input[type=range]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Smooth text selection */
+::selection {
+  background: rgb(var(--aura-accent-rgb) / 0.34);
+  color: white;
+}
+
+/* Toast slide-in animation */
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Pulse glow for now playing */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--aura-accent-rgb) / 0.4); }
+  50% { box-shadow: 0 0 20px 4px rgb(var(--aura-accent-rgb) / 0.16); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Spin animation for loading */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Smooth height transition */
+.transition-height {
+  transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Track row hover reveal */
+.track-row .track-actions {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.track-row:hover .track-actions {
+  opacity: 1;
+}
+
+/* Modal slide up */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-slide-up {
+  animation: slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* EQ panel slide-in from right */
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* EQ slider thumb */
+.eq-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgb(var(--aura-accent-rgb) / 0.4), 0 1px 3px rgba(0,0,0,0.3);
+  border: 2px solid rgb(var(--aura-accent-rgb) / 0.5);
+}
+.eq-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  cursor: pointer;
+  border: 2px solid rgb(var(--aura-accent-rgb) / 0.5);
+  box-shadow: 0 0 6px rgb(var(--aura-accent-rgb) / 0.4), 0 1px 3px rgba(0,0,0,0.3);
+}

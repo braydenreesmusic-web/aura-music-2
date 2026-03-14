@@ -1,0 +1,5 @@
+{
+  "name": "Aura Music",
+  "description": "A sleek, local music player with EQ, metadata enrichment, and video support.",
+  "requestFramePermissions": []
+}
