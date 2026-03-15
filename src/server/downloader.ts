@@ -159,7 +159,12 @@ const YT_DLP = resolveYtDlpCommand();
 const HAS_YT_DLP = canExecute(YT_DLP.command, [...YT_DLP.prefixArgs, '--version']);
 
 if (HAS_YT_DLP) {
-  console.log(`[downloader] yt-dlp found: ${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')}`.trim());
+  try {
+    const ver = execFileSync(YT_DLP.command, [...YT_DLP.prefixArgs, '--version'], { encoding: 'utf8', env: CHILD_ENV }).trim();
+    console.log(`[downloader] yt-dlp found: ${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')} (version ${ver})`.trim());
+  } catch {
+    console.log(`[downloader] yt-dlp found: ${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')}`.trim());
+  }
 } else {
   console.warn('[downloader] yt-dlp NOT available — falling back to ytdl-core (may be blocked by YouTube)');
 }
@@ -454,7 +459,20 @@ interface VideoMeta {
 
 function getMetadata(url: string): Promise<VideoMeta> {
   return new Promise((resolve, reject) => {
-    const metaArgs = ['--dump-json', '--no-playlist', '--no-warnings', '--no-check-formats', url];
+    // Use --print instead of --dump-json to avoid format selection entirely.
+    // --dump-json triggers yt-dlp's format resolver internally (to populate
+    // the "requested_formats" field) which fails with "Requested format is
+    // not available" on datacenter IPs where YouTube restricts certain streams.
+    const SEP = '|||';
+    const template = ['%(title)s', '%(uploader)s', '%(thumbnail)s', '%(duration)s'].join(SEP);
+    const metaArgs = [
+      '--no-playlist',
+      '--no-warnings',
+      '--no-check-formats',
+      '--skip-download',
+      '--print', template,
+      url,
+    ];
     console.log(`[downloader] fetching metadata for: ${url}`);
     const proc = spawnYtDlp(metaArgs);
     let stdout = '';
@@ -467,19 +485,54 @@ function getMetadata(url: string): Promise<VideoMeta> {
       if (code !== 0) {
         const errMsg = stderr.trim() || `yt-dlp metadata failed (code ${code})`;
         console.error(`[downloader] METADATA FAILED (code ${code}):`, errMsg);
-        reject(new Error(errMsg));
+
+        // Fallback: try --dump-json with -f b (single best muxed format)
+        // in case --print isn't supported on this yt-dlp version
+        console.log('[downloader] retrying metadata with --dump-json -f b ...');
+        const fallback = spawnYtDlp(['--dump-json', '--no-playlist', '--no-warnings', '--no-check-formats', '-f', 'b', url]);
+        let fbOut = '';
+        let fbErr = '';
+        fallback.stdout.on('data', (d: Buffer) => { fbOut += d.toString(); });
+        fallback.stderr.on('data', (d: Buffer) => { fbErr += d.toString(); });
+        fallback.on('close', (fbCode) => {
+          if (fbCode !== 0) {
+            console.error(`[downloader] METADATA FALLBACK also failed (code ${fbCode}):`, fbErr.trim());
+            reject(new Error(errMsg));
+            return;
+          }
+          try {
+            const data = JSON.parse(fbOut);
+            resolve({
+              title: data.title || 'Unknown',
+              artist: data.uploader || data.channel || 'Unknown Artist',
+              thumbnail: data.thumbnail || '',
+              duration: data.duration || 0,
+            });
+          } catch {
+            reject(new Error('Failed to parse yt-dlp metadata (fallback)'));
+          }
+        });
+        fallback.on('error', () => reject(new Error(errMsg)));
         return;
       }
-      try {
-        const data = JSON.parse(stdout);
+
+      const line = stdout.trim().split('\n')[0] || '';
+      const parts = line.split(SEP);
+      if (parts.length >= 4) {
         resolve({
-          title: data.title || 'Unknown',
-          artist: data.uploader || data.channel || 'Unknown Artist',
-          thumbnail: data.thumbnail || '',
-          duration: data.duration || 0,
+          title: parts[0] || 'Unknown',
+          artist: parts[1] || 'Unknown Artist',
+          thumbnail: parts[2] || '',
+          duration: parseInt(parts[3], 10) || 0,
         });
-      } catch (e) {
-        reject(new Error('Failed to parse yt-dlp metadata'));
+      } else {
+        // Shouldn't happen, but handle gracefully
+        resolve({
+          title: parts[0] || 'Unknown',
+          artist: parts[1] || 'Unknown Artist',
+          thumbnail: '',
+          duration: 0,
+        });
       }
     });
 

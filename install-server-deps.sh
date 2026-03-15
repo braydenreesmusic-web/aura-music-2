@@ -15,37 +15,36 @@ export PATH="$BIN_DIR:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 echo "[setup] BIN_DIR=$BIN_DIR"
 
 # ── yt-dlp ──────────────────────────────────────────────────────
-if [ -x "$BIN_DIR/yt-dlp" ]; then
-  echo "[setup] yt-dlp already in project: $($BIN_DIR/yt-dlp --version 2>/dev/null)"
-else
-  echo "[setup] Installing yt-dlp…"
-  INSTALLED=false
+# Always (re-)download the latest binary to stay ahead of YouTube API changes.
+# yt-dlp is a fast-moving target; stale binaries cause "format not available" errors.
+EXISTING_VER="$($BIN_DIR/yt-dlp --version 2>/dev/null || echo 'none')"
+echo "[setup] Current yt-dlp version: $EXISTING_VER — updating to latest…"
+INSTALLED=false
 
-  # Attempt 1: download standalone binary (fastest, no python needed)
-  echo "[setup]  → downloading standalone binary…"
-  if curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp" \
-       -o "$BIN_DIR/yt-dlp" 2>/dev/null; then
+# Attempt 1: download standalone binary (fastest, no python needed)
+echo "[setup]  → downloading standalone binary…"
+if curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp" \
+     -o "$BIN_DIR/yt-dlp" 2>/dev/null; then
+  chmod +x "$BIN_DIR/yt-dlp"
+  INSTALLED=true
+fi
+
+# Attempt 2: pip install then copy binary into BIN_DIR
+if [ "$INSTALLED" = false ] && command -v python3 &>/dev/null; then
+  echo "[setup]  → trying pip install --user + copy…"
+  python3 -m pip install --user --quiet yt-dlp 2>/dev/null || true
+  PIP_BIN="$HOME/.local/bin/yt-dlp"
+  if [ -x "$PIP_BIN" ]; then
+    cp "$PIP_BIN" "$BIN_DIR/yt-dlp"
     chmod +x "$BIN_DIR/yt-dlp"
     INSTALLED=true
   fi
+fi
 
-  # Attempt 2: pip install then copy binary into BIN_DIR
-  if [ "$INSTALLED" = false ] && command -v python3 &>/dev/null; then
-    echo "[setup]  → trying pip install --user + copy…"
-    python3 -m pip install --user --quiet yt-dlp 2>/dev/null || true
-    PIP_BIN="$HOME/.local/bin/yt-dlp"
-    if [ -x "$PIP_BIN" ]; then
-      cp "$PIP_BIN" "$BIN_DIR/yt-dlp"
-      chmod +x "$BIN_DIR/yt-dlp"
-      INSTALLED=true
-    fi
-  fi
-
-  if [ "$INSTALLED" = true ]; then
-    echo "[setup] yt-dlp installed: $($BIN_DIR/yt-dlp --version 2>/dev/null || echo 'ok')"
-  else
-    echo "[setup] ⚠ yt-dlp could not be installed — downloads will use ytdl-core fallback"
-  fi
+if [ "$INSTALLED" = true ]; then
+  echo "[setup] yt-dlp installed: $($BIN_DIR/yt-dlp --version 2>/dev/null || echo 'ok')"
+else
+  echo "[setup] ⚠ yt-dlp could not be installed — downloads will use ytdl-core fallback"
 fi
 
 # ── ffmpeg ──────────────────────────────────────────────────────
