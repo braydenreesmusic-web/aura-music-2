@@ -243,6 +243,10 @@ export async function downloadMedia(
   // NOTE: no -f flag — let yt-dlp auto-select the best available format.
   // Explicit format selectors like "bestvideo+bestaudio" can fail on the
   // standalone binary depending on version / available streams.
+  //
+  // --no-check-formats: don't try to HEAD-request each format URL to verify
+  // it's reachable — this fails on datacenter IPs where YouTube throttles.
+  args.push('--no-check-formats');
 
   const filename = `${safeTitle}.${ext}`;
   const filePath = path.join(downloadDir, filename);
@@ -260,7 +264,8 @@ export async function downloadMedia(
   );
 
   return new Promise((resolve, reject) => {
-    console.log(`[downloader] running: yt-dlp ${args.join(' ')}`);
+    const fullCmd = [YT_DLP.command, ...YT_DLP.prefixArgs, ...cookieArgs().map(a => a.includes('cookie') ? a : '***'), ...args].join(' ');
+    console.log(`[downloader] running: ${fullCmd}`);
     const proc = spawnYtDlp(args, { cwd: downloadDir });
     let lastProgress = 0;
     let stderr = '';
@@ -286,7 +291,10 @@ export async function downloadMedia(
       // yt-dlp may add extensions — find the actual file
       const actualFile = findOutputFile(downloadDir, safeTitle, ext);
       if (code !== 0 || !actualFile) {
-        reject(new Error(normalizeDownloadErrorMessage(stderr.trim() || `yt-dlp exited with code ${code}`)));
+        const errMsg = stderr.trim() || `yt-dlp exited with code ${code}`;
+        console.error(`[downloader] DOWNLOAD FAILED (code ${code}):`, errMsg);
+        console.error(`[downloader] command was: ${fullCmd}`);
+        reject(new Error(normalizeDownloadErrorMessage(errMsg)));
         return;
       }
 
@@ -446,7 +454,9 @@ interface VideoMeta {
 
 function getMetadata(url: string): Promise<VideoMeta> {
   return new Promise((resolve, reject) => {
-    const proc = spawnYtDlp(['--dump-json', '--no-playlist', '--no-warnings', url]);
+    const metaArgs = ['--dump-json', '--no-playlist', '--no-warnings', '--no-check-formats', url];
+    console.log(`[downloader] fetching metadata for: ${url}`);
+    const proc = spawnYtDlp(metaArgs);
     let stdout = '';
     let stderr = '';
 
@@ -455,7 +465,9 @@ function getMetadata(url: string): Promise<VideoMeta> {
 
     proc.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(stderr.trim() || `yt-dlp metadata failed (code ${code})`));
+        const errMsg = stderr.trim() || `yt-dlp metadata failed (code ${code})`;
+        console.error(`[downloader] METADATA FAILED (code ${code}):`, errMsg);
+        reject(new Error(errMsg));
         return;
       }
       try {
