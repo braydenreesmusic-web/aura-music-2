@@ -13,8 +13,13 @@ type YtDlpCommand = {
 // - "mweb" (mobile-web) sometimes bypasses datacenter blocks
 // - Do NOT skip webpage — cookies require the normal web flow
 // - Do NOT use ios/android — they can't use Netscape cookie jars
+//
+// --js-runtimes node:<path> explicitly enables Node.js for EJS challenge solving.
+// Node is NOT auto-detected by yt-dlp; only deno is enabled by default.
+// See https://github.com/yt-dlp/yt-dlp/wiki/EJS
 const DEFAULT_YT_DLP_ARGS = [
   '--extractor-args', 'youtube:player_client=web,mweb',
+  '--js-runtimes', `node:${process.execPath}`,
 ];
 
 // Ensure Homebrew & common binary dirs are on PATH for child processes (ffmpeg, etc.).
