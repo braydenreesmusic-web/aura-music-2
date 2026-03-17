@@ -72,7 +72,7 @@ function AppInner() {
   const [showAuth, setShowAuth] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const isOnline = useOnlineStatus();
-  const { addFiles, videoUrl, currentTrack, tracks, albums, playlists, addToast, applyCloudSnapshot, setViewMode, showVideoInline } = usePlayer();
+  const { addFiles, videoUrl, currentTrack, tracks, albums, playlists, addToast, applyCloudSnapshot, setViewMode, viewMode, showVideoInline } = usePlayer();
 
   React.useEffect(() => {
     const raw = localStorage.getItem(UI_SESSION_KEY);
@@ -454,28 +454,39 @@ function AppInner() {
         {showEq && <Equalizer onClose={() => setShowEq(false)} />}
         {showVideo && videoUrl && <VideoPlayer onClose={() => setShowVideo(false)} />}
 
-        {/* Floating menu (unchanged) */}
-        <div className="absolute top-4 right-4 z-[120]">
-          <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/75 backdrop-blur-xl p-2 shadow-2xl min-w-[320px]">
-            {/* ...existing code for menu... */}
-            <div className="flex items-center gap-2 mb-2">
-              <button
-                onClick={() => { setMenuOpen(true); setMenuTab('account'); }}
-                className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${menuTab === 'account' ? 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40' : 'bg-zinc-800/70 text-zinc-300 hover:text-white'}`}
-              >
-                <UserRound size={13} />
-                Account
-              </button>
-              <button
-                onClick={() => { setMenuOpen(true); setMenuTab('appearance'); }}
-                className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${menuTab === 'appearance' ? 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40' : 'bg-zinc-800/70 text-zinc-300 hover:text-white'}`}
-              >
-                <Sparkles size={13} />
-                Appearance
-              </button>
-            </div>
+        {/* Settings toggle button */}
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          className="absolute top-4 right-4 z-[121] w-9 h-9 rounded-full bg-zinc-800/80 backdrop-blur-md border border-zinc-700/50 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors shadow-lg"
+          title="Settings"
+        >
+          <UserRound size={16} />
+        </button>
+
+        {/* Floating menu — only shown when open */}
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-[119]" onClick={() => setMenuOpen(false)} />
+            <div className="absolute top-14 right-4 z-[120] animate-slide-up">
+              <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/95 backdrop-blur-xl p-2 shadow-2xl min-w-[320px]">
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    onClick={() => setMenuTab('account')}
+                    className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${menuTab === 'account' ? 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40' : 'bg-zinc-800/70 text-zinc-300 hover:text-white'}`}
+                  >
+                    <UserRound size={13} />
+                    Account
+                  </button>
+                  <button
+                    onClick={() => setMenuTab('appearance')}
+                    className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${menuTab === 'appearance' ? 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40' : 'bg-zinc-800/70 text-zinc-300 hover:text-white'}`}
+                  >
+                    <Sparkles size={13} />
+                    Appearance
+                  </button>
+                </div>
             {/* ...existing code for menu content... */}
-            {menuOpen && menuTab === 'account' && (
+            {menuTab === 'account' && (
               <div className="space-y-2 p-1">
                 <div className="rounded-xl bg-zinc-800/70 border border-zinc-700/50 px-3 py-2 text-xs text-zinc-300 flex items-center justify-between">
                   <span className="truncate mr-2">{user ? user.email : 'Local mode (not signed in)'}</span>
@@ -522,7 +533,7 @@ function AppInner() {
                 )}
               </div>
             )}
-            {menuOpen && menuTab === 'appearance' && (
+            {menuTab === 'appearance' && (
               <div className="space-y-2 p-1">
                 <button
                   onClick={() => setThemeMode((prev) => (prev === 'dark' ? 'light' : 'dark'))}
@@ -547,8 +558,10 @@ function AppInner() {
                 </button>
               </div>
             )}
-          </div>
-        </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
       {/* Desktop PlayerBar */}
       <div className="playerbar-desktop relative z-10">
@@ -558,35 +571,34 @@ function AppInner() {
           showEq={showEq}
         />
       </div>
-      {/* Mobile Bottom Nav and PlayerBar */}
-      <div className="sidebar-mobile">
-        {/* Mobile Bottom Nav */}
+      {/* Mobile Bottom Nav and PlayerBar — hidden on desktop via CSS */}
+      <div className="sidebar-mobile hidden">
         <button
-          className={`flex flex-col items-center flex-1 py-1 ${menuTab === 'home' ? 'text-indigo-400' : 'text-zinc-400 hover:text-white'}`}
+          className={`flex flex-col items-center flex-1 py-1 ${viewMode === 'all' || viewMode === 'favorites' || viewMode === 'recently-played' || viewMode === 'videos' ? 'text-indigo-400' : 'text-zinc-400 hover:text-white'}`}
           onClick={() => { setViewMode('all'); }}
           aria-label="Home"
         >
-          <Home size={24} />
-          <span className="text-xs mt-0.5">Home</span>
+          <Home size={22} />
+          <span className="text-[10px] mt-0.5">Home</span>
         </button>
         <button
-          className={`flex flex-col items-center flex-1 py-1 ${menuTab === 'library' ? 'text-indigo-400' : 'text-zinc-400 hover:text-white'}`}
+          className={`flex flex-col items-center flex-1 py-1 ${viewMode === 'albums' || viewMode === 'album-detail' || viewMode === 'album-edit' || viewMode === 'playlist-detail' ? 'text-indigo-400' : 'text-zinc-400 hover:text-white'}`}
           onClick={() => { setViewMode('albums'); }}
           aria-label="Library"
         >
-          <Library size={24} />
-          <span className="text-xs mt-0.5">Library</span>
+          <Library size={22} />
+          <span className="text-[10px] mt-0.5">Library</span>
         </button>
         <button
-          className={`flex flex-col items-center flex-1 py-1 ${menuTab === 'search' ? 'text-indigo-400' : 'text-zinc-400 hover:text-white'}`}
+          className={`flex flex-col items-center flex-1 py-1 ${viewMode === 'discover' ? 'text-indigo-400' : 'text-zinc-400 hover:text-white'}`}
           onClick={() => { setViewMode('discover'); }}
-          aria-label="Search"
+          aria-label="Discover"
         >
-          <Compass size={24} />
-          <span className="text-xs mt-0.5">Search</span>
+          <Compass size={22} />
+          <span className="text-[10px] mt-0.5">Discover</span>
         </button>
       </div>
-      <div className="playerbar-mobile">
+      <div className="playerbar-mobile hidden">
         <PlayerBar
           onToggleEq={() => setShowEq(!showEq)}
           onToggleVideo={() => setShowVideo(!showVideo)}

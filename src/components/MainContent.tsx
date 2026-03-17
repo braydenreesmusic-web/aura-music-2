@@ -133,7 +133,7 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
   }
 
   return (
-    <div className={`maincontent-root flex-1 overflow-y-auto relative ${isLibraryAmbientActive ? 'bg-zinc-950/80' : 'bg-zinc-950'}`}>
+    <div className={`maincontent-root flex-1 h-full overflow-y-auto relative ${isLibraryAmbientActive ? 'bg-zinc-950/80' : 'bg-zinc-950'}`}>
       <LibraryVideoAmbient active={isLibraryAmbientActive} videoUrl={videoUrl} />
       {!isLibraryAmbientActive && <NowPlayingBackdrop coverUrl={currentTrack?.coverUrl} className="h-96" />}
 
@@ -141,10 +141,10 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
         {/* Header */}
         <div className="flex items-end justify-between mb-4 md:mb-6">
           <div>
-            <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-1 md:mb-1.5 drop-shadow-lg">{heading}</h1>
-            <p className="text-zinc-400 text-sm">
-              {filteredTracks.length} track{filteredTracks.length !== 1 ? 's' : ''}
-              {filteredTracks.length > 0 && ` · ${formatTotalTime(totalDuration)}`}
+            <h1 className="text-2xl md:text-5xl font-extrabold text-white tracking-tight mb-1 md:mb-1.5 drop-shadow-lg">{heading}</h1>
+            <p className="text-zinc-400 text-xs md:text-sm">
+              {displayedTracks.length} track{displayedTracks.length !== 1 ? 's' : ''}
+              {displayedTracks.length > 0 && ` · ${formatTotalTime(totalDuration)}`}
             </p>
           </div>
           <div className="hidden md:block w-1/3 max-w-xs">
@@ -399,9 +399,9 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
           </div>
         )}
 
-        {/* Keyboard shortcut hint */}
+        {/* Keyboard shortcut hint (desktop only) */}
         {tracks.length > 0 && (
-          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[10px] text-zinc-600 uppercase tracking-widest">
+          <div className="hidden md:flex mt-8 flex-wrap gap-x-6 gap-y-2 text-[10px] text-zinc-600 uppercase tracking-widest">
             <span><kbd className="px-1.5 py-0.5 bg-zinc-900 rounded text-zinc-500 border border-zinc-800 font-mono text-[9px]">Space</kbd> play/pause</span>
             <span><kbd className="px-1.5 py-0.5 bg-zinc-900 rounded text-zinc-500 border border-zinc-800 font-mono text-[9px]">←→</kbd> seek</span>
             <span><kbd className="px-1.5 py-0.5 bg-zinc-900 rounded text-zinc-500 border border-zinc-800 font-mono text-[9px]">Shift+←→</kbd> prev/next</span>
