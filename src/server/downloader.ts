@@ -8,9 +8,13 @@ type YtDlpCommand = {
   prefixArgs: string[];
 };
 
+// YouTube client strategy for datacenter IPs:
+// - "web" client uses cookies for authentication (primary)
+// - "mweb" (mobile-web) sometimes bypasses datacenter blocks
+// - Do NOT skip webpage — cookies require the normal web flow
+// - Do NOT use ios/android — they can't use Netscape cookie jars
 const DEFAULT_YT_DLP_ARGS = [
-  '--extractor-args', 'youtube:player_client=ios,android,web',
-  '--extractor-args', 'youtube:player_skip=webpage,configs',
+  '--extractor-args', 'youtube:player_client=web,mweb',
 ];
 
 // Ensure Homebrew & common binary dirs are on PATH for child processes (ffmpeg, etc.).
@@ -190,7 +194,8 @@ function spawnYtDlp(args: string[], options?: SpawnOptionsWithoutStdio) {
 
 export async function debugListFormats(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const proc = spawnYtDlp(['--list-formats', '--no-playlist', '--no-warnings', url]);
+    // Use -v (verbose) so we can see which clients are tried, cookie status, etc.
+    const proc = spawnYtDlp(['-v', '--list-formats', '--no-playlist', url]);
     let stdout = '';
     let stderr = '';
 
@@ -198,9 +203,18 @@ export async function debugListFormats(url: string): Promise<string> {
     proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
 
     proc.on('close', (code) => {
-      const output = `${stdout}${stderr}`.trim();
+      // Verbose info goes to stderr, format list to stdout
+      const header = [
+        `=== yt-dlp debug (code ${code}) ===`,
+        `cookies: ${HAS_COOKIES ? 'YES' : 'NO'}`,
+        `command: ${YT_DLP.command}`,
+        `default_args: ${DEFAULT_YT_DLP_ARGS.join(' ')}`,
+        ``,
+      ].join('\n');
+      const output = `${header}${stderr}\n\n--- STDOUT ---\n${stdout}`.trim();
       if (code !== 0) {
-        reject(new Error(output || `yt-dlp --list-formats failed (code ${code})`));
+        // Still resolve (don't reject) so we can see the full debug info
+        resolve(output);
         return;
       }
       resolve(output);
