@@ -65,6 +65,19 @@ else
   fi
 fi
 
-echo "[setup] Contents of $BIN_DIR (yt-dlp/ffmpeg):"
-ls -la "$BIN_DIR/yt-dlp" "$BIN_DIR/ffmpeg" "$BIN_DIR/ffprobe" 2>/dev/null || true
+# ── node symlink for yt-dlp JS challenge solving ────────────────
+# yt-dlp needs a JS runtime (node/deno/bun/quickjs) on PATH to solve
+# YouTube's signature challenges. Create a symlink so yt-dlp finds node.
+NODE_PATH="$(which node 2>/dev/null || echo '')"
+if [ -n "$NODE_PATH" ] && [ ! -e "$BIN_DIR/node" ]; then
+  ln -sf "$NODE_PATH" "$BIN_DIR/node"
+  echo "[setup] Created node symlink: $BIN_DIR/node -> $NODE_PATH"
+elif [ -e "$BIN_DIR/node" ]; then
+  echo "[setup] node symlink already exists in $BIN_DIR"
+else
+  echo "[setup] ⚠ node not found — yt-dlp JS challenges will fail"
+fi
+
+echo "[setup] Contents of $BIN_DIR (yt-dlp/ffmpeg/node):"
+ls -la "$BIN_DIR/yt-dlp" "$BIN_DIR/ffmpeg" "$BIN_DIR/ffprobe" "$BIN_DIR/node" 2>/dev/null || true
 echo "[setup] Done ✅"

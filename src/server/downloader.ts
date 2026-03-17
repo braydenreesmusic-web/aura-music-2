@@ -189,6 +189,21 @@ const HAS_FFMPEG = (() => {
 })();
 console.log(`[downloader] ffmpeg: ${HAS_FFMPEG ? 'available' : 'NOT available (no format conversion)'}`);
 console.log(`[downloader] node for yt-dlp JS challenges: ${NODE_BIN_DIR}/node (${process.version})`);
+
+// Ensure yt-dlp can find a `node` binary in PROJECT_BIN for JS challenge solving.
+// The standalone yt-dlp binary searches PATH for node/deno/bun/quickjs.
+// On Render, node may be in a NVM-managed path that yt-dlp doesn't see.
+try {
+  const nodeLinkPath = path.join(PROJECT_BIN, 'node');
+  if (!fs.existsSync(nodeLinkPath)) {
+    fs.symlinkSync(process.execPath, nodeLinkPath);
+    console.log(`[downloader] Created node symlink: ${nodeLinkPath} -> ${process.execPath}`);
+  } else {
+    console.log(`[downloader] node symlink exists: ${nodeLinkPath}`);
+  }
+} catch (err) {
+  console.warn(`[downloader] Could not create node symlink in ${PROJECT_BIN}:`, err);
+}
 function spawnYtDlp(args: string[], options?: SpawnOptionsWithoutStdio) {
   return spawn(YT_DLP.command, [...YT_DLP.prefixArgs, ...DEFAULT_YT_DLP_ARGS, ...cookieArgs(), ...args], {
     ...options,
