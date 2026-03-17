@@ -5,7 +5,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import Database from 'better-sqlite3';
 import { searchYouTube, getVideoInfo } from './youtube';
-import { downloadMedia, hasCookies } from './downloader';
+import { downloadMedia, hasCookies, debugListFormats } from './downloader';
 import { matchMetadata } from './metadataMatch';
 
 const app = express();
@@ -136,6 +136,17 @@ app.use('/downloads', express.static(DOWNLOAD_DIR));
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, ts: Date.now(), ytCookies: hasCookies });
+});
+
+app.get('/api/debug/yt-formats', async (req, res) => {
+  try {
+    const url = String(req.query.url || 'https://www.youtube.com/watch?v=wycjnCCgUes');
+    const output = await debugListFormats(url);
+    res.type('text/plain').send(output);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: message });
+  }
 });
 
 function hashPassword(password: string, salt: string) {

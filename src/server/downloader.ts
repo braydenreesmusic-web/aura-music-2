@@ -8,6 +8,11 @@ type YtDlpCommand = {
   prefixArgs: string[];
 };
 
+const DEFAULT_YT_DLP_ARGS = [
+  '--extractor-args', 'youtube:player_client=ios,android,web',
+  '--extractor-args', 'youtube:player_skip=webpage,configs',
+];
+
 // Ensure Homebrew & common binary dirs are on PATH for child processes (ffmpeg, etc.).
 const HOME = process.env.HOME || '/root';
 const PROJECT_BIN = path.join(process.cwd(), 'node_modules', '.bin');
@@ -177,9 +182,31 @@ const HAS_FFMPEG = (() => {
 console.log(`[downloader] ffmpeg: ${HAS_FFMPEG ? 'available' : 'NOT available (no format conversion)'}`);
 
 function spawnYtDlp(args: string[], options?: SpawnOptionsWithoutStdio) {
-  return spawn(YT_DLP.command, [...YT_DLP.prefixArgs, ...cookieArgs(), ...args], {
+  return spawn(YT_DLP.command, [...YT_DLP.prefixArgs, ...DEFAULT_YT_DLP_ARGS, ...cookieArgs(), ...args], {
     ...options,
     env: CHILD_ENV,
+  });
+}
+
+export async function debugListFormats(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const proc = spawnYtDlp(['--list-formats', '--no-playlist', '--no-warnings', url]);
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
+    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+
+    proc.on('close', (code) => {
+      const output = `${stdout}${stderr}`.trim();
+      if (code !== 0) {
+        reject(new Error(output || `yt-dlp --list-formats failed (code ${code})`));
+        return;
+      }
+      resolve(output);
+    });
+
+    proc.on('error', (err) => reject(new Error(`Failed to spawn yt-dlp: ${err.message}`)));
   });
 }
 
