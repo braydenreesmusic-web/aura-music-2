@@ -133,7 +133,7 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
   }
 
   return (
-    <div className={`flex-1 overflow-y-auto relative ${isLibraryAmbientActive ? 'bg-zinc-950/80' : 'bg-zinc-950'}`}>
+    <div className={`maincontent-root flex-1 overflow-y-auto relative ${isLibraryAmbientActive ? 'bg-zinc-950/80' : 'bg-zinc-950'}`}>
       <LibraryVideoAmbient active={isLibraryAmbientActive} videoUrl={videoUrl} />
       {!isLibraryAmbientActive && <NowPlayingBackdrop coverUrl={currentTrack?.coverUrl} className="h-96" />}
 
@@ -257,7 +257,7 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
             </div>
 
             {/* Track list */}
-            <div ref={listParentRef} className="mt-1 max-h-[calc(100vh-20.5rem)] overflow-y-auto">
+            <div ref={listParentRef} className="tracklist-scroll mt-1 max-h-[calc(100vh-20.5rem)] overflow-y-auto">
               <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
                 {rowVirtualizer.getVirtualItems()
                   .filter((virtualRow) => displayedTracks[virtualRow.index])

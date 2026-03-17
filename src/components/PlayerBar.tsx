@@ -117,9 +117,9 @@ export const PlayerBar: React.FC<{ onToggleEq: () => void; onToggleVideo: () => 
   const sleepOptions = [5, 10, 15, 30, 45, 60, 90, 120];
 
   return (
-    <div className="h-[88px] bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800/50 flex items-center justify-between px-5 select-none">
+    <div className="playerbar-root h-[88px] bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800/50 flex items-center justify-between px-5 select-none">
       {/* Track Info */}
-      <div className="flex items-center gap-3.5 w-[300px] min-w-[200px]">
+      <div className="playerbar-track flex items-center gap-3.5 w-[300px] min-w-[200px]">
         {currentTrack ? (
           <>
             <div className={`shrink-0 ${isPlaying ? 'animate-pulse-glow' : ''} rounded-lg relative group/cover`}>
@@ -190,8 +190,8 @@ export const PlayerBar: React.FC<{ onToggleEq: () => void; onToggleVideo: () => 
       </div>
 
       {/* Center Controls */}
-      <div className="flex flex-col items-center justify-center flex-1 max-w-2xl px-4">
-        <div className="flex items-center gap-5 mb-2">
+      <div className="playerbar-center flex flex-col items-center justify-center flex-1 max-w-2xl px-4">
+        <div className="playerbar-transport flex items-center gap-5 mb-2">
           <button
             onClick={toggleShuffle}
             className={`transition-colors p-1 rounded-md ${isShuffle ? 'text-indigo-400 bg-indigo-500/10' : 'text-zinc-500 hover:text-white'}`}
@@ -225,7 +225,7 @@ export const PlayerBar: React.FC<{ onToggleEq: () => void; onToggleVideo: () => 
         </div>
 
         {/* Progress bar */}
-        <div className="w-full flex items-center gap-3 text-[11px] text-zinc-500 font-mono tabular-nums">
+        <div className="playerbar-progress-row w-full flex items-center gap-3 text-[11px] text-zinc-500 font-mono tabular-nums">
           <span className="w-10 text-right">{formatTime(displayTime)}</span>
           <div
             className="flex-1 h-1 bg-zinc-800 rounded-full cursor-pointer relative group"
@@ -259,7 +259,7 @@ export const PlayerBar: React.FC<{ onToggleEq: () => void; onToggleVideo: () => 
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center justify-end gap-2 w-[320px] min-w-[220px]">
+      <div className="playerbar-right flex items-center justify-end gap-2 w-[320px] min-w-[220px]">
         {/* Lyrics */}
         {currentTrack?.lyrics && (
           <button
@@ -338,7 +338,7 @@ export const PlayerBar: React.FC<{ onToggleEq: () => void; onToggleVideo: () => 
         </div>
 
         {/* Volume */}
-        <div className="flex items-center gap-2 w-28 group">
+        <div className="playerbar-volume flex items-center gap-2 w-28 group">
           <button
             onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
             className="text-zinc-500 hover:text-white transition-colors shrink-0"
