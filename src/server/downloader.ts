@@ -20,10 +20,14 @@ const DEFAULT_YT_DLP_ARGS = [
 // Ensure Homebrew & common binary dirs are on PATH for child processes (ffmpeg, etc.).
 const HOME = process.env.HOME || '/root';
 const PROJECT_BIN = path.join(process.cwd(), 'node_modules', '.bin');
+// Include the directory of the running Node.js binary so yt-dlp can find
+// a JS runtime for signature/challenge solving (required since 2026+).
+const NODE_BIN_DIR = path.dirname(process.execPath);
 const CHILD_ENV: NodeJS.ProcessEnv = {
   ...process.env,
   PATH: [
     PROJECT_BIN,                    // project-local (Render deploy artifact)
+    NODE_BIN_DIR,                   // current Node.js binary (for yt-dlp JS challenges)
     `${HOME}/.local/bin`,           // pip install --user
     '/opt/homebrew/bin',            // macOS Homebrew
     '/usr/local/bin',
@@ -184,7 +188,7 @@ const HAS_FFMPEG = (() => {
   catch { return false; }
 })();
 console.log(`[downloader] ffmpeg: ${HAS_FFMPEG ? 'available' : 'NOT available (no format conversion)'}`);
-
+console.log(`[downloader] node for yt-dlp JS challenges: ${NODE_BIN_DIR}/node (${process.version})`);
 function spawnYtDlp(args: string[], options?: SpawnOptionsWithoutStdio) {
   return spawn(YT_DLP.command, [...YT_DLP.prefixArgs, ...DEFAULT_YT_DLP_ARGS, ...cookieArgs(), ...args], {
     ...options,
