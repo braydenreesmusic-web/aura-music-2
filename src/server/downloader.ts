@@ -22,6 +22,13 @@ const DEFAULT_YT_DLP_ARGS = [
   '--js-runtimes', `node:${process.execPath}`,
 ];
 
+export const ytDlpRuntimeInfo = {
+  command: () => YT_DLP.command,
+  prefixArgs: () => [...YT_DLP.prefixArgs],
+  defaultArgs: () => [...DEFAULT_YT_DLP_ARGS],
+  nodeExecPath: () => process.execPath,
+};
+
 // Ensure Homebrew & common binary dirs are on PATH for child processes (ffmpeg, etc.).
 const HOME = process.env.HOME || '/root';
 const PROJECT_BIN = path.join(process.cwd(), 'node_modules', '.bin');
@@ -180,8 +187,10 @@ if (HAS_YT_DLP) {
   try {
     const ver = execFileSync(YT_DLP.command, [...YT_DLP.prefixArgs, '--version'], { encoding: 'utf8', env: CHILD_ENV }).trim();
     console.log(`[downloader] yt-dlp found: ${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')} (version ${ver})`.trim());
+    console.log(`[downloader] yt-dlp default args: ${DEFAULT_YT_DLP_ARGS.join(' ')}`);
   } catch {
     console.log(`[downloader] yt-dlp found: ${YT_DLP.command} ${YT_DLP.prefixArgs.join(' ')}`.trim());
+    console.log(`[downloader] yt-dlp default args: ${DEFAULT_YT_DLP_ARGS.join(' ')}`);
   }
 } else {
   console.warn('[downloader] yt-dlp NOT available — falling back to ytdl-core (may be blocked by YouTube)');
