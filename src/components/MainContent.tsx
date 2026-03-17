@@ -89,7 +89,7 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
   };
 
   const rowVirtualizer = useVirtualizer({
-    count: filteredTracks.length,
+    count: displayedTracks.length,
     getScrollElement: () => listParentRef.current,
     estimateSize: () => 62,
     overscan: 8,
@@ -137,17 +137,17 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
       <LibraryVideoAmbient active={isLibraryAmbientActive} videoUrl={videoUrl} />
       {!isLibraryAmbientActive && <NowPlayingBackdrop coverUrl={currentTrack?.coverUrl} className="h-96" />}
 
-      <div className="relative z-10 p-8">
+      <div className="relative z-10 p-4 md:p-8">
         {/* Header */}
-        <div className="flex items-end justify-between mb-6">
+        <div className="flex items-end justify-between mb-4 md:mb-6">
           <div>
-            <h1 className="text-5xl font-extrabold text-white tracking-tight mb-1.5 drop-shadow-lg">{heading}</h1>
+            <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-1 md:mb-1.5 drop-shadow-lg">{heading}</h1>
             <p className="text-zinc-400 text-sm">
               {filteredTracks.length} track{filteredTracks.length !== 1 ? 's' : ''}
               {filteredTracks.length > 0 && ` · ${formatTotalTime(totalDuration)}`}
             </p>
           </div>
-          <div className="w-1/3 max-w-xs">
+          <div className="hidden md:block w-1/3 max-w-xs">
             <Visualizer />
           </div>
         </div>
@@ -247,8 +247,8 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
           </div>
         ) : (
           <div className="w-full">
-            {/* Column headers */}
-            <div className="grid grid-cols-[40px_1fr_1fr_64px_80px] gap-4 px-4 py-2.5 border-b border-zinc-800/60 text-[11px] font-semibold text-zinc-500 uppercase tracking-widest">
+            {/* Column headers — hidden on mobile */}
+            <div className="hidden md:grid grid-cols-[40px_1fr_1fr_64px_80px] gap-4 px-4 py-2.5 border-b border-zinc-800/60 text-[11px] font-semibold text-zinc-500 uppercase tracking-widest">
               <div className="text-center">#</div>
               <div>Title</div>
               <div>Album</div>
@@ -256,12 +256,10 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
               <div></div>
             </div>
 
-            {/* Track list */}
-            <div ref={listParentRef} className="tracklist-scroll mt-1 max-h-[calc(100vh-20.5rem)] overflow-y-auto">
+            {/* Track list — inner scroll only on desktop; on mobile the outer container scrolls */}
+            <div ref={listParentRef} className="tracklist-scroll mt-1 md:max-h-[calc(100vh-20.5rem)] md:overflow-y-auto">
               <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-                {rowVirtualizer.getVirtualItems()
-                  .filter((virtualRow) => displayedTracks[virtualRow.index])
-                  .map((virtualRow) => {
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                     const track = displayedTracks[virtualRow.index];
                     if (!track) return null;
                     const index = virtualRow.index;
@@ -282,7 +280,7 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
                       }}
                       onMouseEnter={() => setHoveredTrack(track.id)}
                       onMouseLeave={() => setHoveredTrack(null)}
-                      className={`track-row grid grid-cols-[40px_1fr_1fr_64px_80px] gap-4 px-4 py-2.5 rounded-lg items-center transition-all duration-150 group cursor-default ${
+                      className={`track-row grid grid-cols-[36px_1fr_96px] md:grid-cols-[40px_1fr_1fr_64px_80px] gap-2 md:gap-4 px-3 md:px-4 py-3 md:py-2.5 rounded-lg items-center transition-all duration-150 group cursor-default ${
                         isCurrent
                           ? 'bg-indigo-500/10 border border-indigo-500/20'
                           : 'hover:bg-zinc-800/40 border border-transparent'
@@ -342,13 +340,13 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
                       </div>
                     </div>
 
-                    {/* Album */}
-                    <div className="text-sm text-zinc-500 truncate">{track.album}</div>
+                    {/* Album (hidden on mobile) */}
+                    <div className="hidden md:block text-sm text-zinc-500 truncate">{track.album}</div>
 
-                    {/* Duration */}
-                    <div className="text-xs text-zinc-500 tabular-nums text-right">{formatTime(track.duration)}</div>
+                    {/* Duration (desktop only) */}
+                    <div className="hidden md:block text-xs text-zinc-500 tabular-nums text-right">{formatTime(track.duration)}</div>
 
-                    {/* Actions */}
+                    {/* Actions (visible on mobile for quick download) */}
                     <div className="track-actions flex items-center justify-end gap-1.5">
                       {track.isCloudTrack && !track.isDownloaded && (
                         <button

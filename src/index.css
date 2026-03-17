@@ -164,9 +164,8 @@
   }
 
   .tracklist-scroll {
-    max-height: calc(100dvh - 23rem) !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .playerbar-desktop {
