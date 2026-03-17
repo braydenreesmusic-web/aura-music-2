@@ -43,8 +43,7 @@ export const Sidebar: React.FC<{
   };
 
   return (
-    <>
-      <div className="w-72 bg-zinc-900/80 backdrop-blur-sm h-full flex flex-col border-r border-zinc-800/50">
+    <div className="w-72 bg-zinc-900/80 backdrop-blur-sm h-full flex flex-col border-r border-zinc-800/50 sidebar-desktop">
       {/* Logo */}
       <div className="p-6 pb-4">
         <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
@@ -339,7 +338,5 @@ export const Sidebar: React.FC<{
         </div>
       </div>
     </div>
-
-    </>
   );
 };

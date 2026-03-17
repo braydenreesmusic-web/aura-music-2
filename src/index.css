@@ -78,6 +78,52 @@
 }
 
 /* Custom scrollbar */
+/* --- Mobile Responsive Styles --- */
+
+@media (max-width: 600px) {
+  .aura-shell {
+    flex-direction: column !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+  }
+  .sidebar-mobile {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 64px;
+    background: var(--aura-bg);
+    border-top: 1px solid #27272a;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    z-index: 100;
+    box-shadow: 0 -2px 12px 0 rgb(0 0 0 / 0.12);
+  }
+  .sidebar-desktop {
+    display: none !important;
+  }
+  .main-content-mobile {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding-bottom: 64px;
+    /* leave space for bottom nav */
+  }
+  .playerbar-mobile {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 64px;
+    z-index: 101;
+    width: 100vw;
+    border-radius: 0;
+    box-shadow: 0 -1px 8px 0 rgb(0 0 0 / 0.10);
+  }
+  .playerbar-desktop {
+    display: none !important;
+  }
+}
 ::-webkit-scrollbar {
   width: 6px;
 }

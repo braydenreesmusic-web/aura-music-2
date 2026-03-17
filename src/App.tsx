@@ -14,7 +14,7 @@ import { ToastContainer } from './components/ToastContainer';
 import { AuthModal } from './components/AuthModal';
 import { accountSync, isUnauthorizedError, type AccountUser } from './services/accountSync';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
-import { Upload, UserRound, Sparkles, Moon, Sun, Palette, CloudUpload, CloudDownload, LogOut, BarChart3 } from 'lucide-react';
+import { Upload, UserRound, Sparkles, Moon, Sun, Palette, CloudUpload, CloudDownload, LogOut, BarChart3, Home, Library, Compass } from 'lucide-react';
 import { audioPlayer } from './services/AudioPlayer';
 
 const UI_SESSION_KEY = 'aura-ui-session-v1';
@@ -443,13 +443,21 @@ function AppInner() {
 
       <div className="flex-1 flex overflow-hidden relative z-10">
         <MediaElementHost />
-        <Sidebar onToggleQueue={() => setShowQueue(!showQueue)} showQueue={showQueue} />
-        <MainContent libraryAmbientEnabled={libraryAmbientEnabled} />
+        {/* Desktop Sidebar */}
+        <div className="sidebar-desktop">
+          <Sidebar onToggleQueue={() => setShowQueue(!showQueue)} showQueue={showQueue} />
+        </div>
+        {/* Main Content */}
+        <div className="main-content-mobile flex-1 min-w-0">
+          <MainContent libraryAmbientEnabled={libraryAmbientEnabled} />
+        </div>
         {showEq && <Equalizer onClose={() => setShowEq(false)} />}
         {showVideo && videoUrl && <VideoPlayer onClose={() => setShowVideo(false)} />}
 
+        {/* Floating menu (unchanged) */}
         <div className="absolute top-4 right-4 z-[120]">
           <div className="rounded-2xl border border-zinc-700/50 bg-zinc-900/75 backdrop-blur-xl p-2 shadow-2xl min-w-[320px]">
+            {/* ...existing code for menu... */}
             <div className="flex items-center gap-2 mb-2">
               <button
                 onClick={() => { setMenuOpen(true); setMenuTab('account'); }}
@@ -466,14 +474,14 @@ function AppInner() {
                 Appearance
               </button>
             </div>
-
+            {/* ...existing code for menu content... */}
             {menuOpen && menuTab === 'account' && (
               <div className="space-y-2 p-1">
                 <div className="rounded-xl bg-zinc-800/70 border border-zinc-700/50 px-3 py-2 text-xs text-zinc-300 flex items-center justify-between">
                   <span className="truncate mr-2">{user ? user.email : 'Local mode (not signed in)'}</span>
                   <span className={isOnline ? 'text-emerald-400' : 'text-amber-400'}>{isOnline ? 'Online' : 'Offline'}</span>
                 </div>
-
+                {/* ...existing code... */}
                 {!user ? (
                   <button
                     onClick={() => setShowAuth(true)}
@@ -514,7 +522,6 @@ function AppInner() {
                 )}
               </div>
             )}
-
             {menuOpen && menuTab === 'appearance' && (
               <div className="space-y-2 p-1">
                 <button
@@ -543,7 +550,43 @@ function AppInner() {
           </div>
         </div>
       </div>
-      <div className="relative z-10">
+      {/* Desktop PlayerBar */}
+      <div className="playerbar-desktop relative z-10">
+        <PlayerBar
+          onToggleEq={() => setShowEq(!showEq)}
+          onToggleVideo={() => setShowVideo(!showVideo)}
+          showEq={showEq}
+        />
+      </div>
+      {/* Mobile Bottom Nav and PlayerBar */}
+      <div className="sidebar-mobile">
+        {/* Mobile Bottom Nav */}
+        <button
+          className={`flex flex-col items-center flex-1 py-1 ${menuTab === 'home' ? 'text-indigo-400' : 'text-zinc-400 hover:text-white'}`}
+          onClick={() => { setViewMode('all'); }}
+          aria-label="Home"
+        >
+          <Home size={24} />
+          <span className="text-xs mt-0.5">Home</span>
+        </button>
+        <button
+          className={`flex flex-col items-center flex-1 py-1 ${menuTab === 'library' ? 'text-indigo-400' : 'text-zinc-400 hover:text-white'}`}
+          onClick={() => { setViewMode('albums'); }}
+          aria-label="Library"
+        >
+          <Library size={24} />
+          <span className="text-xs mt-0.5">Library</span>
+        </button>
+        <button
+          className={`flex flex-col items-center flex-1 py-1 ${menuTab === 'search' ? 'text-indigo-400' : 'text-zinc-400 hover:text-white'}`}
+          onClick={() => { setViewMode('discover'); }}
+          aria-label="Search"
+        >
+          <Compass size={24} />
+          <span className="text-xs mt-0.5">Search</span>
+        </button>
+      </div>
+      <div className="playerbar-mobile">
         <PlayerBar
           onToggleEq={() => setShowEq(!showEq)}
           onToggleVideo={() => setShowVideo(!showVideo)}

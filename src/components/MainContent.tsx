@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { usePlayer } from '../store/PlayerContext';
 import type { SortMode } from '../store/PlayerContext';
-import { Play, Pause, Clock, Music, Sparkles, Search, ArrowUpDown, ChevronDown, Upload, Disc3, X, Tag, Heart, CloudDownload } from 'lucide-react';
+import { Play, Pause, Clock, Music, Sparkles, Search, ArrowUpDown, ChevronDown, Upload, Disc3, X, Tag, Heart, CloudDownload, CheckCircle } from 'lucide-react';
 import { Visualizer } from './Visualizer';
 import { NowPlayingBackdrop } from './NowPlayingBackdrop';
 import { enrichMetadata } from '../services/metadataEnricher';
@@ -34,6 +34,8 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
     isOnline, downloadCloudTrack,
   } = usePlayer();
 
+  const [showOfflineOnly, setShowOfflineOnly] = useState(false);
+
   const [hoveredTrack, setHoveredTrack] = useState<string | null>(null);
   const [enrichingId, setEnrichingId] = useState<string | null>(null);
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -60,7 +62,12 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
     setEnrichingId(null);
   };
 
-  const totalDuration = filteredTracks.reduce((acc, t) => acc + t.duration, 0);
+  // Filter for offline-available tracks if toggled
+  const displayedTracks = showOfflineOnly
+    ? filteredTracks.filter((t) => !t.isCloudTrack || t.isDownloaded)
+    : filteredTracks;
+
+  const totalDuration = displayedTracks.reduce((acc, t) => acc + t.duration, 0);
   const formatTotalTime = (secs: number) => {
     const hours = Math.floor(secs / 3600);
     const mins = Math.floor((secs % 3600) / 60);
@@ -145,8 +152,8 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
           </div>
         </div>
 
-        {/* Search & Sort bar */}
-        <div className="flex items-center gap-3 mb-5">
+        {/* Search, Sort, and Offline Filter bar */}
+        <div className="flex items-center gap-3 mb-5 flex-wrap">
           <div className="relative flex-1 max-w-md">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
             <input
@@ -194,6 +201,15 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
               </>
             )}
           </div>
+          {/* Offline filter toggle */}
+          <button
+            onClick={() => setShowOfflineOnly((v) => !v)}
+            className={`flex items-center gap-1 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${showOfflineOnly ? 'bg-indigo-500/10 border-indigo-400 text-indigo-300' : 'bg-zinc-900/80 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'}`}
+            title="Show only offline-available tracks"
+          >
+            <CheckCircle size={14} className={showOfflineOnly ? 'text-emerald-400' : 'text-zinc-500'} />
+            Offline Only
+          </button>
         </div>
 
         {/* Loading indicator */}
@@ -223,7 +239,7 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
               Choose Files
             </button>
           </div>
-        ) : filteredTracks.length === 0 ? (
+        ) : displayedTracks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-zinc-500">
             <Search size={32} className="opacity-40 mb-3" />
             <p className="text-lg font-medium text-zinc-400">No matching tracks</p>
@@ -243,14 +259,16 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
             {/* Track list */}
             <div ref={listParentRef} className="mt-1 max-h-[calc(100vh-20.5rem)] overflow-y-auto">
               <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: 'relative' }}>
-                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const track = filteredTracks[virtualRow.index];
-                  if (!track) return null;
-                  const index = virtualRow.index;
-                  const isCurrent = currentTrack?.id === track.id;
-                  const isHovered = hoveredTrack === track.id;
+                {rowVirtualizer.getVirtualItems()
+                  .filter((virtualRow) => displayedTracks[virtualRow.index])
+                  .map((virtualRow) => {
+                    const track = displayedTracks[virtualRow.index];
+                    if (!track) return null;
+                    const index = virtualRow.index;
+                    const isCurrent = currentTrack?.id === track.id;
+                    const isHovered = hoveredTrack === track.id;
 
-                  return (
+                    return (
                     <div
                       key={`${track.id}-${index}`}
                       data-index={virtualRow.index}
@@ -292,7 +310,7 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
                       )}
                     </div>
 
-                    {/* Title + artist */}
+                    {/* Title + artist + offline/cloud status */}
                     <div className="flex items-center gap-3 overflow-hidden">
                       {track.coverUrl ? (
                         <img src={track.coverUrl} alt={track.album} className="w-10 h-10 rounded-md object-cover shadow-sm shrink-0" />
@@ -302,8 +320,14 @@ export const MainContent: React.FC<{ libraryAmbientEnabled?: boolean }> = ({ lib
                         </div>
                       )}
                       <div className="min-w-0">
-                        <div className={`text-sm font-medium truncate ${isCurrent ? 'text-indigo-400' : 'text-white'}`}>
+                        <div className={`flex items-center gap-1 text-sm font-medium truncate ${isCurrent ? 'text-indigo-400' : 'text-white'}`}>
                           {track.title}
+                          {track.isDownloaded && (
+                            <CheckCircle size={14} className="ml-1 text-emerald-400" title="Available offline" />
+                          )}
+                          {track.isCloudTrack && !track.isDownloaded && (
+                            <CloudDownload size={14} className="ml-1 text-zinc-400" title="Cloud only" />
+                          )}
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); if (track.artist && track.artist !== 'Unknown Artist') setArtistModalName(track.artist); }}
