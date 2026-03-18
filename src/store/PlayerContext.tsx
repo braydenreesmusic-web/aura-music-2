@@ -372,29 +372,54 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       );
 
       const targetTrack = byId || byLooseMatch;
-      if (!targetTrack) continue;
-
-      await updateTrackDB(targetTrack.id, {
-        title: remoteTrack.title,
-        artist: remoteTrack.artist,
-        album: remoteTrack.album,
-        duration: remoteTrack.duration,
-        coverUrl: remoteTrack.coverUrl,
-        isVideo: remoteTrack.isVideo,
-        dateAdded: remoteTrack.dateAdded,
-        albumId: remoteTrack.albumId,
-        trackNumber: remoteTrack.trackNumber,
-        genre: remoteTrack.genre,
-        lyrics: remoteTrack.lyrics,
-        hasVideo: remoteTrack.hasVideo,
-        liked: remoteTrack.liked,
-        playCount: remoteTrack.playCount,
-        lastPlayed: remoteTrack.lastPlayed,
-        remoteAudioUrl: remoteTrack.remoteAudioUrl,
-        remoteVideoUrl: remoteTrack.remoteVideoUrl,
-        isCloudTrack: remoteTrack.isCloudTrack,
-        isDownloaded: remoteTrack.isDownloaded ?? targetTrack.isDownloaded,
-      });
+      if (targetTrack) {
+        // Update existing track
+        await updateTrackDB(targetTrack.id, {
+          title: remoteTrack.title,
+          artist: remoteTrack.artist,
+          album: remoteTrack.album,
+          duration: remoteTrack.duration,
+          coverUrl: remoteTrack.coverUrl,
+          isVideo: remoteTrack.isVideo,
+          dateAdded: remoteTrack.dateAdded,
+          albumId: remoteTrack.albumId,
+          trackNumber: remoteTrack.trackNumber,
+          genre: remoteTrack.genre,
+          lyrics: remoteTrack.lyrics,
+          hasVideo: remoteTrack.hasVideo,
+          liked: remoteTrack.liked,
+          playCount: remoteTrack.playCount,
+          lastPlayed: remoteTrack.lastPlayed,
+          remoteAudioUrl: remoteTrack.remoteAudioUrl,
+          remoteVideoUrl: remoteTrack.remoteVideoUrl,
+          isCloudTrack: remoteTrack.isCloudTrack,
+          isDownloaded: remoteTrack.isDownloaded ?? targetTrack.isDownloaded,
+        });
+      } else {
+        // Create new track from snapshot (e.g. cross-device restore)
+        await addTrack({
+          id: remoteTrack.id,
+          title: remoteTrack.title,
+          artist: remoteTrack.artist,
+          album: remoteTrack.album,
+          duration: remoteTrack.duration,
+          coverUrl: remoteTrack.coverUrl,
+          isVideo: remoteTrack.isVideo,
+          dateAdded: remoteTrack.dateAdded,
+          albumId: remoteTrack.albumId,
+          trackNumber: remoteTrack.trackNumber,
+          genre: remoteTrack.genre,
+          lyrics: remoteTrack.lyrics,
+          hasVideo: remoteTrack.hasVideo,
+          liked: remoteTrack.liked,
+          playCount: remoteTrack.playCount,
+          lastPlayed: remoteTrack.lastPlayed,
+          remoteAudioUrl: remoteTrack.remoteAudioUrl,
+          remoteVideoUrl: remoteTrack.remoteVideoUrl,
+          isCloudTrack: Boolean(remoteTrack.isCloudTrack || remoteTrack.remoteAudioUrl || remoteTrack.remoteVideoUrl),
+          isDownloaded: false,
+        });
+      }
 
       updatedTracks++;
     }

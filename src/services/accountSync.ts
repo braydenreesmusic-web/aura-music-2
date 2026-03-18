@@ -28,7 +28,7 @@ export interface AccountUser {
 export interface CloudSnapshot {
   exportedAt: number;
   tracks: Array<
-    Pick<Track, 'id' | 'title' | 'artist' | 'album' | 'duration' | 'coverUrl' | 'isVideo' | 'dateAdded' | 'albumId' | 'trackNumber' | 'genre' | 'lyrics' | 'hasVideo' | 'liked' | 'playCount' | 'lastPlayed'>
+    Pick<Track, 'id' | 'title' | 'artist' | 'album' | 'duration' | 'coverUrl' | 'isVideo' | 'dateAdded' | 'albumId' | 'trackNumber' | 'genre' | 'lyrics' | 'hasVideo' | 'liked' | 'playCount' | 'lastPlayed' | 'remoteAudioUrl' | 'remoteVideoUrl' | 'isCloudTrack'>
   >;
   albums: Album[];
   playlists: Playlist[];

@@ -305,6 +305,9 @@ function AppInner() {
       liked: t.liked,
       playCount: t.playCount,
       lastPlayed: t.lastPlayed,
+      remoteAudioUrl: t.remoteAudioUrl,
+      remoteVideoUrl: t.remoteVideoUrl,
+      isCloudTrack: t.isCloudTrack,
     }));
 
     return {

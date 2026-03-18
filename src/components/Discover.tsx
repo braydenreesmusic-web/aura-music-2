@@ -176,7 +176,9 @@ const DiscoverContent: React.FC = () => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
-      const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
+      const authToken = localStorage.getItem('aura-auth-token');
+      const searchHeaders: HeadersInit = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+      const res = await fetch(`${API_BASE}/search?q=${encodeURIComponent(q)}`, { signal: controller.signal, headers: searchHeaders });
       clearTimeout(timeout);
       if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
@@ -205,7 +207,10 @@ const DiscoverContent: React.FC = () => {
 
     try {
       const dlType = type === 'both' ? 'both' : 'audio';
-      const res = await fetch(`${API_BASE}/download?videoId=${videoId}&type=${dlType}`);
+      // Include auth token so the server can save the track to the user's cloud library
+      const authToken = localStorage.getItem('aura-auth-token');
+      const headers: HeadersInit = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+      const res = await fetch(`${API_BASE}/download?videoId=${videoId}&type=${dlType}`, { headers });
       if (!res.ok) throw new Error('Download failed');
       if (!res.body) throw new Error('No response body');
 
