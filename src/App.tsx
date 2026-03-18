@@ -495,7 +495,7 @@ function AppInner() {
                 {/* ...existing code... */}
                 {!user ? (
                   <button
-                    onClick={() => setShowAuth(true)}
+                    onClick={() => { setShowAuth(true); setMenuOpen(false); }}
                     className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm"
                   >
                     <UserRound size={14} />
@@ -524,7 +524,7 @@ function AppInner() {
                       <BarChart3 size={13} /> Stats Page
                     </button>
                     <button
-                      onClick={signOut}
+                      onClick={() => { signOut(); setMenuOpen(false); }}
                       className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-red-300 text-xs"
                     >
                       <LogOut size={13} /> Sign out

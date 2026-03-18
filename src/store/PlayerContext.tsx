@@ -434,21 +434,44 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     };
   };
 
+  const resolveRemoteUrl = (url: string | undefined): string | null => {
+    if (!url) return null;
+    // If already absolute, use as-is
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:')) return url;
+    // Relative paths like /api/file/... need to go through apiUrl to get the correct host:port
+    if (url.startsWith('/api/')) return apiUrl(url.replace(/^\/api/, ''));
+    return apiUrl(`/${url}`);
+  };
+
+  const safeCreateObjectURL = (file: File | undefined): string | null => {
+    if (!file) return null;
+    try {
+      // Verify the File is readable (IDB deserialization can leave zombie File objects)
+      if (file.size === 0 && !file.name) return null;
+      return URL.createObjectURL(file);
+    } catch {
+      return null;
+    }
+  };
+
   const prepareTrackMedia = async (track: Track, shouldPlay: boolean, preferInlineVideo?: boolean) => {
     revokeOldUrls();
 
-    const aUrl = track.file
-      ? URL.createObjectURL(track.file)
-      : track.remoteAudioUrl || track.remoteVideoUrl || null;
+    // Try local File first, fall back to resolved remote URL
+    const aUrl = safeCreateObjectURL(track.file)
+      || resolveRemoteUrl(track.remoteAudioUrl)
+      || resolveRemoteUrl(track.remoteVideoUrl)
+      || null;
+
     if (!aUrl) {
       addToast(isOnline ? 'Track is not available yet.' : 'This cloud track needs internet or a local download.', 'error');
       return;
     }
     audioUrlRef.current = aUrl;
 
-    const resolvedVideoUrl = track.videoFile
-      ? URL.createObjectURL(track.videoFile)
-      : (track.remoteVideoUrl || (track.isVideo ? aUrl : null));
+    const resolvedVideoUrl = safeCreateObjectURL(track.videoFile)
+      || resolveRemoteUrl(track.remoteVideoUrl)
+      || (track.isVideo ? aUrl : null);
 
     videoUrlRef.current = resolvedVideoUrl;
     setVideoUrl(resolvedVideoUrl);
@@ -458,7 +481,23 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     setShowVideoInline(shouldShowVideo);
     if (shouldPlay) {
-      await audioPlayer.play(sourceUrl);
+      try {
+        await audioPlayer.play(sourceUrl);
+      } catch (err) {
+        console.error('Playback failed, attempting fallback:', err);
+        // If blob URL failed (stale File), try remote URL
+        const fallbackUrl = resolveRemoteUrl(track.remoteAudioUrl) || resolveRemoteUrl(track.remoteVideoUrl);
+        if (fallbackUrl && fallbackUrl !== sourceUrl) {
+          audioUrlRef.current = fallbackUrl;
+          try {
+            await audioPlayer.play(fallbackUrl);
+          } catch {
+            addToast('Failed to play track. Try re-downloading it.', 'error');
+          }
+        } else {
+          addToast('Failed to play track. Try re-downloading it.', 'error');
+        }
+      }
     } else {
       audioPlayer.initAudioContext();
       audioPlayer.element.src = sourceUrl;
@@ -580,6 +619,16 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const handleDurationChange = () => setDuration(el.duration);
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
+    const handleError = () => {
+      const err = el.error;
+      if (err) {
+        console.error('Audio element error:', err.code, err.message);
+        // MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED = 4, MEDIA_ERR_NETWORK = 2
+        if (err.code === 4 || err.code === 2) {
+          addToast('Playback failed — the file may be unavailable. Try re-downloading it.', 'error');
+        }
+      }
+    };
     const handleEnded = () => {
       if (currentTrack) {
         const newCount = (currentTrack.playCount || 0) + 1;
@@ -596,12 +645,14 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     el.addEventListener('durationchange', handleDurationChange);
     el.addEventListener('play', handlePlay);
     el.addEventListener('pause', handlePause);
+    el.addEventListener('error', handleError);
     el.addEventListener('ended', handleEnded);
     return () => {
       el.removeEventListener('timeupdate', handleTimeUpdate);
       el.removeEventListener('durationchange', handleDurationChange);
       el.removeEventListener('play', handlePlay);
       el.removeEventListener('pause', handlePause);
+      el.removeEventListener('error', handleError);
       el.removeEventListener('ended', handleEnded);
     };
   }, [repeatMode, queue, currentTrack, isShuffle]);
@@ -785,7 +836,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
 
     try {
-      const audioSource = track.remoteAudioUrl || track.remoteVideoUrl;
+      const audioSource = resolveRemoteUrl(track.remoteAudioUrl) || resolveRemoteUrl(track.remoteVideoUrl);
       const audioRes = audioSource ? await fetch(audioSource) : null;
       if (!audioRes?.ok) throw new Error('Failed to fetch cloud audio');
       const audioBlob = await audioRes.blob();
@@ -793,10 +844,13 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
       let videoFile = track.videoFile;
       if (track.remoteVideoUrl) {
-        const videoRes = await fetch(track.remoteVideoUrl);
-        if (videoRes.ok) {
-          const videoBlob = await videoRes.blob();
-          videoFile = new File([videoBlob], filenameFromUrl(track.remoteVideoUrl, `${track.title}.mp4`), { type: 'video/mp4' });
+        const resolvedVideoUrl = resolveRemoteUrl(track.remoteVideoUrl);
+        if (resolvedVideoUrl) {
+          const videoRes = await fetch(resolvedVideoUrl);
+          if (videoRes.ok) {
+            const videoBlob = await videoRes.blob();
+            videoFile = new File([videoBlob], filenameFromUrl(resolvedVideoUrl, `${track.title}.mp4`), { type: 'video/mp4' });
+          }
         }
       }
 

@@ -84,7 +84,13 @@ export class AudioPlayerService {
       this.element.src = url;
       this.element.load();
     }
-    await this.element.play();
+    try {
+      await this.element.play();
+    } catch (err) {
+      // AbortError is normal when a new play() interrupts the previous one
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      throw err;
+    }
   }
 
   public async resume() {
@@ -92,7 +98,12 @@ export class AudioPlayerService {
     if (this.audioCtx?.state === 'suspended') {
       await this.audioCtx.resume();
     }
-    await this.element.play();
+    try {
+      await this.element.play();
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      throw err;
+    }
   }
 
   public pause() {
